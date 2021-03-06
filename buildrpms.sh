@@ -94,12 +94,11 @@ mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
 do
   # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm +444 -name "${i}*.tar*" -print)"  # Not sortable for mtime (or ctime)?!?
-  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting, but fail in corner cases here
-  case "$(echo "$Archive" | wc -l)" in
-  0)
-    continue
-    ;;
-  [1-9]|[1-9][0-9])
+  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting (instead of -t), but fail in corner cases here
+  Archives="$(echo "$Archive" | wc -l)"
+  if [ "$Archives" = "0" ]
+  then continue
+  elif [ "$Archives" -gt "0" ] 2>/dev/null
   #if [ "$Fuzzy" != "No" ]
   #then Archive="$(echo "$Archive" | sed -n 1P)"
   #fi
@@ -108,44 +107,38 @@ do
     do
       a="$(echo "$PrevArch" | sed 's/\.tar.*$//')"
       b="$(echo "$ThisArch" | sed 's/\.tar.*$//')"
-      c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
-      d="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
-echo -e "$a\t$b\t$c\t$d"
+      c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*')"
+      d="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*')"
+      e="$(echo "$c" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
+      f="$(echo "$d" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
+  echo -e "$a\t$b\t$c\t$d\t$e\t$f"
       if { [ -n "$ThisArch ] && [ "$ThisArch" = "$PrevArch" ] ; } || { [ -n "$d" ] && [ "$c" = "$d" ] ; }
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
         Extract="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
         Hit="$(find -P "$TmpDir/$Extract" -type f -perm +444 -name '*.spec' -print)"
-        case "$(echo "$Hit" | wc -l)" in
-        0)
-          echo ": No spec file found!" | tee -a "$Logfile"
-          ;;
-        1)
+        Hits="$(echo "$Hit" | wc -l)"
+        if [ "$Hits" = "0" ]
+        then echo ": No spec file found!" | tee -a "$Logfile"
+        elif [ "$Hits" = "1" ]
+        then
           sed -i 's/^#Icon: /Icon: /' "$Hit"  # Hardcoded!
           SpecFiles="$SpecFiles$(echo -e "\n")$Hit"
           echo | tee -a "$Logfile"
-          ;;
-        [2-9]|[1-9][0-9])
-          echo ": More than one spec file found, ignoring them all!" | tee -a "$Logfile"
-          ;;
-        *)
-          echo ": Failed to find a spec file!" | tee -a "$Logfile"
-          ;;
-        esac
+        elif [ "$Hits" -gt "1" ] 2>/dev/null
+        then echo ": More than one spec file found, ignoring them all!" | tee -a "$Logfile"
+        else echo ": Failed to find a spec file!" | tee -a "$Logfile"
+        fi
       else
         break
       fi
       PrevArch="$ThisArch"
     done
-    ;;
-  [2-9])
-    echo "Notice: More than one matching archive for a single target found, ignoring them all: $(echo "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
-    ;;
-  *)
-    echo "Notice: Failed to find an archive per provided target(s), see: $(echo "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
-    ;;
-  esac
+  #elif [ "$Archives" -gt "1" ] 2>/dev/null
+  #then echo "Notice: More than one matching archive for a single target found, ignoring them all: $(echo "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
+  else echo "Notice: Failed to find an archive per provided target(s), see: $(echo "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
+  fi
 done
 if [ -n "$SpecFiles" ]
 then
