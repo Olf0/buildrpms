@@ -108,20 +108,18 @@ do
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
       c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
       d="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
-  echo -e "$a\t$b\t$c\t$d"
       if [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ] || [ -n "$d" -a "$d" = "$c" ]
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
         Hit="$(find -P "$TmpDir/$a" -type f -perm +444 -name '*.spec' -print)"
-    echo "$Hit"
         Hits="$(echo "$Hit" | wc -l)"
         if [ "$Hits" = "0" ]
         then echo ": No spec file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
         then
           sed -i 's/^#Icon: /Icon: /' "$Hit"  # Hardcoded!
-          SpecFiles="$SpecFiles$(echo -e "\n")$Hit"
+          SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
           echo | tee -a "$Logfile"
         elif [ "$Hits" -gt "1" ] 2>/dev/null
         then echo ": More than one spec file found, ignoring them all!" | tee -a "$Logfile"
@@ -139,6 +137,7 @@ done
 if [ -n "$SpecFiles" ]
 then
   SpecFiles="$(echo "$SpecFiles" | grep -v '^$')"
+  echo "$SpecFiles"
 else
   echo "Aborting: Not a single spec file found!" | tee -a "$Logfile" >&2
   rm -rf "$TmpDir"
