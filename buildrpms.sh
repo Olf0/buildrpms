@@ -64,7 +64,7 @@ for i in $(echo "$Targets" | tr ',' '\n')
 do
   for j in ~/android_storage/Download/${i}*.tar* ~/Downloads/${i}*.tar*  # Hardcoded!
   do
-    if [ ! -d "$j" ] 2>/dev/null && [ -s "$j" ] 2>/dev/null && [ -r "$j" ] 2>/dev/null
+    if [ -s "$j" ] 2>/dev/null && [ -r "$j" ] 2>/dev/null && [ ! -d "$j" ] 2>/dev/null
     then
       Archive="$(basename "$j")"
       if [ -e "SOURCES/$Archive" ]
@@ -91,7 +91,7 @@ SpecFiles=""
 mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
 do
-  # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm +444 -name "${i}*.tar*" -print)"  # Not sortable for mtime (or ctime)?!?
+  # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm +444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
   Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting (instead of -t), but fail in corner cases here
   Archives="$(echo "$Archive" | wc -l)"
   if [ "$Archives" = "0" ]
@@ -111,7 +111,7 @@ do
       e="$(echo "$c" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
       f="$(echo "$d" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
   echo -e "$a\t$b\t$c\t$d\t$e\t$f"
-      if [ -n "$ThisArch -a "$ThisArch" = "$PrevArch" ] || [ -n "$f" -a "$f" = "$e" ]
+      if [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ] || [ -n "$f" -a "$f" = "$e" ]
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
@@ -129,8 +129,7 @@ do
         then echo ": More than one spec file found, ignoring them all!" | tee -a "$Logfile"
         else echo ": Failed to find a spec file!" | tee -a "$Logfile"
         fi
-      else
-        break
+      else break
       fi
       PrevArch="$ThisArch"
     done
