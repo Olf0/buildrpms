@@ -15,7 +15,8 @@ export LC_COLLATE=POSIX
 # Currently also no capital letters (i.e., upper-case characters)
 # or white-space characters are allowed in the argument string or
 # real file names processed.  Allowing for capital letters is easy
-# to resolve (but what for?), but white-spaces this is rather hard.
+# to resolve (but what for?), but for white-spaces this is rather
+# hard.
 # If no argument is given, it will use an internal list.
 
 Called="$(basename "$0")"
@@ -87,7 +88,7 @@ then
 else echo "- Nothing." | tee -a "$Logfile"
 fi
 
-echo -e "\nExtracting spec file from" | tee -a "$Logfile"
+echo -e "\nExtracting spec-file from" | tee -a "$Logfile"
 SpecFiles=""
 mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
@@ -116,7 +117,7 @@ do
         Hit="$(find -P "$TmpDir/$b" -type f -perm +444 -name '*.spec' -print)"
         Hits="$(echo "$Hit" | wc -l)"
         if [ "$Hits" = "0" ]
-        then echo ": No spec file found!" | tee -a "$Logfile"
+        then echo ": No spec-file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
         then
           if e="$(fgrep 'Icon:' "$Hit")"
@@ -129,8 +130,8 @@ do
           SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
           echo | tee -a "$Logfile"
         elif [ "$Hits" -gt "1" ] 2>/dev/null
-        then echo ": More than one spec file found, ignoring them all!" | tee -a "$Logfile"
-        else echo ": Failed to find a spec file!" | tee -a "$Logfile"
+        then echo ": More than one spec-file found, ignoring them all!" | tee -a "$Logfile"
+        else echo ": Failed to find a spec-file!" | tee -a "$Logfile"
         fi
       else break
       fi
@@ -145,7 +146,7 @@ if [ -n "$SpecFiles" ]
 then
   SpecFiles="$(echo "$SpecFiles" | grep -v '^$')"
 else
-  echo "Aborting: Not a single spec file found!" | tee -a "$Logfile" >&2
+  echo "Aborting: Not a single spec-file found!" | tee -a "$Logfile" >&2
   rm -rf "$TmpDir"
   exit 2
 fi
