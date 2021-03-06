@@ -119,11 +119,12 @@ do
         then echo ": No spec file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
         then
-          if e="$(fgrep -i 'Icon:' "$Hit")"
+          if e="$(fgrep 'Icon:' "$Hit")"
           then
-            IconFile="$(echo "$e" | grep -oi 'Icon:[^#]*' | sed -n 1P | sed 's/[iI][cC][oO][nN]://' | sed 's/[[:space:]]//g')"
+            IconFile="$(echo "$e" | grep -o 'Icon:[^#]*' | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
             IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
-            [ ! -e "SOURCES/$IconFile" ] && mkdir -p SOURCES && ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/# *[iI][cC][oO][nN]:/Icon:/' "$Hit"
+            [ ! -e "SOURCES/$IconFile" ] && mkdir -p SOURCES && ln -s "$IconPath" "SOURCES/$IconFile"
+            sed -i 's/# *Icon:/Icon:/' "$Hit"
           fi
           SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
           echo | tee -a "$Logfile"
@@ -156,7 +157,7 @@ do
   a="$(echo "$i" | sed "s/^${QuotedTempDir}//")"
   RPMname="$(dirname "$a" | grep -o '^[^/]*')"
   ExRPMs="$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print)"
-  ExSRPMs="$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print)"
+  ExSRPMs="$(find SRPMS -maixdepth 1 -name "${RPMname}*.s*rpm" -print)"
   case "$(echo "$ExRPMs" | wc -l)_$(echo "$ExSRPMs" | wc -l)" in
   0_0)
     echo "- Building RPM & SRPM for $RPMname" | tee -a "$Logfile"
