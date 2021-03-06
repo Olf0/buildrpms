@@ -193,7 +193,7 @@ do
     echo "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$Logfile"
     ;;
   *)
-    echo "Warning: Something went severely wrong, while determining what to build (RPM and/or SRPM) for $RPMname: Skip it." | tee -a "$Logfile" 2>&1
+    echo "Warning: Something went severely wrong, while determining what to build (RPM and/or SRPM) for $RPMname: Skipping it!" | tee -a "$Logfile" 2>&1
     ;;
   esac
 done
