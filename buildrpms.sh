@@ -162,15 +162,15 @@ do
     echo "- Building RPM & SRPM for $RPMname" | tee -a "$Logfile"
     rpmbuild -ba "$i" 2>&1 | tee -a "$Logfile"
     ;;
-  0_[1-9])
+  0_*)
     echo "- Building RPM for $RPMname" | tee -a "$Logfile"
     rpmbuild -bb "$i" 2>&1 | tee -a "$Logfile"
     ;;
-  [1-9]_0)
+  *_0)
     echo "- Building SRPM for $RPMname" | tee -a "$Logfile"
     rpmbuild -bs "$i" 2>&1 | tee -a "$Logfile"
     ;;
-  [1-9]_[1-9])
+  *_*)
     echo "Notice: Skip building for $RPMname, because both RPM & SRPM already exist." | tee -a "$Logfile" >&2
     ;;
   *)
