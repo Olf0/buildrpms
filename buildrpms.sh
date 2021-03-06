@@ -17,9 +17,9 @@ export LC_COLLATE=POSIX
 # export IFS="$(echo -e "\n")"
 
 # buildrpms.sh expects a comma separated list of tar archive names 
-# without an extension as single argument.  These archive names may 
-# be truncated (i.e., provide only the beginning of their names) 
-# or contain wildcards!
+# without their file name extension(s) (!) as single argument.
+# These archive names may be truncated (i.e., provide only the 
+# beginning of their names) or contain wildcards (e.g., ? * [])!
 # The true archive names (i.e., on the file system) must contain 
 # the string ".tar" as part of their file name extension.
 # Currently also no capital letters (i.e., upper-case characters)
