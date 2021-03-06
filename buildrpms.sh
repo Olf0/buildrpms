@@ -112,7 +112,7 @@ do
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
-        Hit="$(find -P "$TmpDir/$a" -type f -perm +444 -name '*.spec' -print)"
+        Hit="$(find -P "$TmpDir/$b" -type f -perm +444 -name '*.spec' -print)"
         Hits="$(echo "$Hit" | wc -l)"
         if [ "$Hits" = "0" ]
         then echo ": No spec file found!" | tee -a "$Logfile"
@@ -137,7 +137,6 @@ done
 if [ -n "$SpecFiles" ]
 then
   SpecFiles="$(echo "$SpecFiles" | grep -v '^$')"
-  echo "$SpecFiles"
 else
   echo "Aborting: Not a single spec file found!" | tee -a "$Logfile" >&2
   rm -rf "$TmpDir"
@@ -145,7 +144,7 @@ else
 fi
 
 echo -e "\nBuilding (S)RPM(s)" | tee -a "$Logfile"
-for i in "$SpecFiles"
+for i in $SpecFiles
 do
   QuotedTempDir="$(echo "${TmpDir}/" | sed 's/\//\\\//g')"
   a="$(echo "$i" | sed "s/^${QuotedTempDir}//")"
