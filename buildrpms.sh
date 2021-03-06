@@ -124,7 +124,7 @@ do
           then
             IconFile="$(echo "$e" | grep -o 'Icon:[^#]*' | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
             IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
-            [ ! -e "SOURCES/$IconFile" ] && mkdir -p SOURCES && ln -s "$IconPath" "SOURCES/$IconFile"
+            [ ! -e "SOURCES/$IconFile" ] && ln -s "$IconPath" "SOURCES/$IconFile"
             sed -i 's/# *Icon:/Icon:/' "$Hit"
           fi
           SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
