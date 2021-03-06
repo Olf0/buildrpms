@@ -86,7 +86,7 @@ then
 else echo "- Nothing." | tee -a "$Logfile"
 fi
 
-echo -e "\nExtracting spec file(s)" | tee -a "$Logfile"
+echo -e "\nExtracting spec file from" | tee -a "$Logfile"
 SpecFiles=""
 mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
@@ -157,15 +157,15 @@ do
     rpmbuild -ba "$i" 2>&1 | tee -a "$Logfile"
     ;;
   0_*)
-    echo "- Building RPM for $RPMname" | tee -a "$Logfile"
+    echo "- Building RPM for $RPMname, because its SRPM already exists." | tee -a "$Logfile"
     rpmbuild -bb "$i" 2>&1 | tee -a "$Logfile"
     ;;
   *_0)
-    echo "- Building SRPM for $RPMname" | tee -a "$Logfile"
+    echo "- Building SRPM for $RPMname, because its RPM already exists." | tee -a "$Logfile"
     rpmbuild -bs "$i" 2>&1 | tee -a "$Logfile"
     ;;
   *_*)
-    echo "Notice: Skip building for $RPMname, because both RPM & SRPM already exist." | tee -a "$Logfile" >&2
+    echo "- Skip building for $RPMname, because its RPM & SRPM both already exist." | tee -a "$Logfile" >&2
     ;;
   *)
     echo "Warning: Something went severely wrong, while determining what to build (RPM and/or SRPM) for $RPMname: Skip it." | tee -a "$Logfile" 2>&1
