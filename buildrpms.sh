@@ -122,7 +122,7 @@ do
           if e="$(fgrep -i 'Icon:' "$Hit")"
           then
             IconFile="$(echo "$e" | grep -oi 'Icon:[^#]*' | sed -n 1P | sed 's/[iI][cC][oO][nN]://' | sed 's/[[:space:]]//g')"
-            IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print)"
+            IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
             [ ! -e "SOURCES/$IconFile" ] && mkdir -p SOURCES && ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/# *[iI][cC][oO][nN]:/Icon:/' "$Hit"
           fi
           SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
