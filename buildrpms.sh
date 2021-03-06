@@ -119,7 +119,12 @@ do
         then echo ": No spec file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
         then
-          sed -i 's/^#Icon: /Icon: /' "$Hit"  # Hardcoded!
+          if e="$(fgrep -i 'Icon:' "$Hit")"
+          then
+            IconFile="$(echo "$e" | grep -oi 'Icon:[^#]*' | sed 's/[iI][cC][oO][nN]://' | sed 's/[[:space:]]//g' | sed -n 1P)"
+            IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print)"
+            [ ! -e "SOURCES/$IconFile" ] && mkdir -p SOURCES && ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/# *[iI][cC][oO][nN]:/Icon:/' "$Hit"
+          fi
           SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
           echo | tee -a "$Logfile"
         elif [ "$Hits" -gt "1" ] 2>/dev/null
