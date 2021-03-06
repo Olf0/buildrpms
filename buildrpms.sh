@@ -1,21 +1,8 @@
-#!/bin/bash
-set -uC -o posix  # Add -e later
-
-# Using bash for this script (in its first line), as this ensures that "-o pipefail" (in line 123) is available,
-# after checking that bash seems to be present in mer-core at least since 2011-10-04
-# (see https://git.sailfishos.org/mer-core/bash / https://git.merproject.org/mer-core/bash ) and consequently in
-# SailfishOS since its beginnings (checked v1.0.0.5 per
-# curl https://releases.sailfishos.org/sources/sailfish-1.0.0.5-oss.tar.bz2 | tar -tv | fgrep 'bash' , as no earlier
-# released version is available there, e.g. the first ones at https://coderus.openrepos.net/whitesoft/sailversion ).
-# In  SailfishOS releases before 4.0, /bin/sh is just a symbolic link to /bin/bash anyway; though I have not checked
-# that for ancient releases (which might be re-deployed after a "factory reset"), likely SailfishOS inherited that 
-# from Fedora, via MeeGo and Mer (MeeGo reconstructed).
-# Per SailfishOS 4.0, ash has become the shell installed by default, which provides some bash compatibility when
-# called via its bash-symlink (which is deployed per busybox-symlinks-bash RPM), including "-o pipefail" (hurray!).
-# Nevertheless, this script is still a Bourne (not-"Again") Shell script and stays free of bashisms.
+#!/bin/sh
+set -uC  # Add -e later
 
 # Exit codes:
-#   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbulid proper
+#   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbuild run(s)
 #   1  A check failed
 #   2  Help called
 #   3  Called incorrectly (e.g., with wrong parameters)
@@ -34,7 +21,7 @@ export LC_COLLATE=POSIX
 # be truncated (i.e., provide only the beginning of their names) 
 # or contain wildcards!
 # The true archive names (i.e., on the file system) must contain 
-# the string ".tar*" as extension.
+# the string ".tar" as part of their file name extension.
 # Currently also no capital letters (i.e., upper-case characters)
 # or white-space characters are allowed in the argument string or
 # real file names processed.  Allowing for capital letters is easy
@@ -182,16 +169,25 @@ do
   RPMname="$(dirname "$a" | grep -o '^[^/]*')"
   case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
   0_0)
-    echo "- Building RPM(s) & SRPM for $RPMname" | tee -a "$Logfile"
-    rpmbuild -ba "$i" 2>&1 | tee -a "$Logfile" >&2
+    echo -n "- Building RPM(s) & SRPM for $RPMname" | tee -a "$Logfile"
+    if rpmbuild -ba "$i" >> "$Logfile" 2>&1
+    then echo ": success."
+    else echo ": failed!"
+    fi
     ;;
   0_*)
-    echo "- Building RPM(s) for $RPMname, because its SRPM already exists." | tee -a "$Logfile"
-    rpmbuild -bb "$i" 2>&1 | tee -a "$Logfile" >&2
+    echo -n "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$Logfile"
+    if rpmbuild -bb "$i" >> "$Logfile" 2>&1
+    then echo ": success."
+    else echo ": failed!"
+    fi
     ;;
   *_0)
-    echo "- Building SRPM for $RPMname, because an RPM for it already exists." | tee -a "$Logfile"
-    rpmbuild -bs "$i" 2>&1 | tee -a "$Logfile" >&2
+    echo -n "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$Logfile"
+    if rpmbuild -bs "$i" >> "$Logfile" 2>&1
+    then echo ": success."
+    else echo ": failed!"
+    fi
     ;;
   *_*)
     echo "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$Logfile"
