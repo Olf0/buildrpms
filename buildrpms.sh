@@ -50,7 +50,7 @@ if [ -n "$*" ]
 then
   Targets="$1"
   Fuzzy=No
-  if echo "$Targets" | tr ',' '\n' | grep -vq '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9a-z][+.0-9_a-z~-]*$'
+  if echo "$Targets" | tr ',' '\n' | grep -vq '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][+.0-9_a-z~-]*$'
   then Fuzzy=Yes
   fi
 else
