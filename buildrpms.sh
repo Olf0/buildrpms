@@ -114,13 +114,15 @@ do
   #then Archive="$(echo "$Archive" | sed -n 1P)"
   #fi
     PrevArch="$(echo "$Archive" | sed -n 1P)"
+    a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
+    c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z]')"
+    e="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos')"
     for ThisArch in $Archive
     do
-      a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
-      c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
-      d="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
-      if [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ] || [ -n "$d" -a "$d" = "$c" ]
+      d="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z]')"
+      f="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos')"
+      if [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ] || [ -n "$f" -a "$f" = "$e" ] || [ -n "$d" -a "$Fuzzy" = "No" -a "$d" = "$c" ]
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
@@ -130,9 +132,9 @@ do
         then echo ": No spec-file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
         then
-          if e="$(fgrep 'Icon:' "$Hit")"
+          if x="$(fgrep 'Icon:' "$Hit")"
           then
-            IconFile="$(echo "$e" | grep -o 'Icon:[^#]*' | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
+            IconFile="$(echo "$x" | grep -o 'Icon:[^#]*' | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
             IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
             [ ! -e "SOURCES/$IconFile" ] && ln -s "$IconPath" "SOURCES/$IconFile"
             sed -i 's/# *Icon:/Icon:/' "$Hit"
@@ -146,6 +148,9 @@ do
       else break
       fi
       PrevArch="$ThisArch"
+      a="$b"
+      c="$d"
+      e="$f"
     done
   #elif [ "$Archives" -gt "1" ] 2>/dev/null
   #then echo "Notice: More than one matching archive for a single target found, ignoring them all: $(echo "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
