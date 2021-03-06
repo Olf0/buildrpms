@@ -104,8 +104,8 @@ do
     PrevArch="$(echo "$Archive" | sed -n 1P)"
     for ThisArch in $Archive
     do
-      a="$(echo "$PrevArch" | sed 's/\.tar.*$//')"
-      b="$(echo "$ThisArch" | sed 's/\.tar.*$//')"
+      a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
+      b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
       c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*')"
       d="$(echo "$b" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-[0-9a-z][+.0-9_a-z~-]*fos[0-9][+.0-9_a-z~-]*')"
       e="$(echo "$c" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
