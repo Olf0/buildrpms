@@ -68,8 +68,7 @@ do
     then
       Archive="$(basename "$j")"
       if [ -e "SOURCES/$Archive" ]
-      then
-        echo "- Warning: Ignoring ${j}, because SOURCES/$Archive already exists." | tee -a "$Logfile"
+      then echo "- Warning: Ignoring ${j}, because SOURCES/$Archive already exists." | tee -a "$Logfile"
       else
         echo "- $j" | tee -a "$Logfile"
         mv "$j" SOURCES/
@@ -84,8 +83,7 @@ then
   echo "Notice: Using solely \"${Moved}\" as target(s)." | tee -a "$Logfile"
   Targets="$Moved"
   Fuzzy=No
-else
-  echo "- Nothing." | tee -a "$Logfile"
+else echo "- Nothing." | tee -a "$Logfile"
 fi
 
 echo -e "\nExtracting spec file(s)" | tee -a "$Logfile"
@@ -99,6 +97,7 @@ do
   if [ "$Archives" = "0" ]
   then continue
   elif [ "$Archives" -gt "0" ] 2>/dev/null
+  then
   #if [ "$Fuzzy" != "No" ]
   #then Archive="$(echo "$Archive" | sed -n 1P)"
   #fi
@@ -112,7 +111,7 @@ do
       e="$(echo "$c" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
       f="$(echo "$d" | grep -o '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][.0-9]*-')"
   echo -e "$a\t$b\t$c\t$d\t$e\t$f"
-      if { [ -n "$ThisArch ] && [ "$ThisArch" = "$PrevArch" ] ; } || { [ -n "$d" ] && [ "$c" = "$d" ] ; }
+      if [ -n "$ThisArch -a "$ThisArch" = "$PrevArch" ] || [ -n "$f" -a "$f" = "$e" ]
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
