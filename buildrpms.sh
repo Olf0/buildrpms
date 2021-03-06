@@ -154,18 +154,18 @@ do
   case "$(echo "$ExRPMs" | wc -l)_$(echo "$ExSRPMs" | wc -l)" in
   0_0)
     echo "- Building RPM & SRPM for $RPMname" | tee -a "$Logfile"
-    rpmbuild -ba "$i" 2>&1 | tee -a "$Logfile"
+    rpmbuild -ba "$i" 2>&1 | tee -a "$Logfile" >&2
     ;;
   0_*)
     echo "- Building RPM for $RPMname, because its SRPM already exists." | tee -a "$Logfile"
-    rpmbuild -bb "$i" 2>&1 | tee -a "$Logfile"
+    rpmbuild -bb "$i" 2>&1 | tee -a "$Logfile" >&2
     ;;
   *_0)
     echo "- Building SRPM for $RPMname, because its RPM already exists." | tee -a "$Logfile"
-    rpmbuild -bs "$i" 2>&1 | tee -a "$Logfile"
+    rpmbuild -bs "$i" 2>&1 | tee -a "$Logfile" >&2
     ;;
   *_*)
-    echo "- Skip building for $RPMname, because its RPM & SRPM both already exist." | tee -a "$Logfile" >&2
+    echo "- Skip building for $RPMname, because its RPM & SRPM both already exist." | tee -a "$Logfile"
     ;;
   *)
     echo "Warning: Something went severely wrong, while determining what to build (RPM and/or SRPM) for $RPMname: Skip it." | tee -a "$Logfile" 2>&1
