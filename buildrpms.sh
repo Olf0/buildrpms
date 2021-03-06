@@ -170,21 +170,21 @@ do
   case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
   0_0)
     echo -n "- Building RPM(s) & SRPM for $RPMname" | tee -a "$Logfile"
-    if rpmbuild -ba "$i" >> "$Logfile" 2>&1
+    if rpmbuild -v -ba "$i" >> "$Logfile" 2>&1
     then echo ": success."
     else echo ": failed!"
     fi
     ;;
   0_*)
     echo -n "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$Logfile"
-    if rpmbuild -bb "$i" >> "$Logfile" 2>&1
+    if rpmbuild -v -bb "$i" >> "$Logfile" 2>&1
     then echo ": success."
     else echo ": failed!"
     fi
     ;;
   *_0)
     echo -n "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$Logfile"
-    if rpmbuild -bs "$i" >> "$Logfile" 2>&1
+    if rpmbuild -v -bs "$i" >> "$Logfile" 2>&1
     then echo ": success."
     else echo ": failed!"
     fi
@@ -193,7 +193,7 @@ do
     echo "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$Logfile"
     ;;
   *)
-    echo "Warning: Something went severely wrong, while determining what to build (RPM and/or SRPM) for $RPMname: Skipping it!" | tee -a "$Logfile" 2>&1
+    echo "Warning: Something went severely wrong while determining what to build (RPM and/or SRPM) for $RPMname, thus skipping it!" | tee -a "$Logfile" 2>&1
     ;;
   esac
 done
