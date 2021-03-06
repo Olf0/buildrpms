@@ -1,5 +1,28 @@
-#!/bin/sh
-set -uC  # Add -e later
+#!/bin/bash
+set -uC -o posix  # Add -e later
+
+# Using bash for this script (in its first line), as this ensures that "-o pipefail" (in line 123) is available,
+# after checking that bash seems to be present in mer-core at least since 2011-10-04
+# (see https://git.sailfishos.org/mer-core/bash / https://git.merproject.org/mer-core/bash ) and consequently in
+# SailfishOS since its beginnings (checked v1.0.0.5 per
+# curl https://releases.sailfishos.org/sources/sailfish-1.0.0.5-oss.tar.bz2 | tar -tv | fgrep 'bash' , as no earlier
+# released version is available there, e.g. the first ones at https://coderus.openrepos.net/whitesoft/sailversion ).
+# In  SailfishOS releases before 4.0, /bin/sh is just a symbolic link to /bin/bash anyway; though I have not checked
+# that for ancient releases (which might be re-deployed after a "factory reset"), likely SailfishOS inherited that 
+# from Fedora, via MeeGo and Mer (MeeGo reconstructed).
+# Per SailfishOS 4.0, ash has become the shell installed by default, which provides some bash compatibility when
+# called via its bash-symlink (which is deployed per busybox-symlinks-bash RPM), including "-o pipefail" (hurray!).
+# Nevertheless, this script is still a Bourne (not-"Again") Shell script and stays free of bashisms.
+
+# Exit codes:
+#   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbulid proper
+#   1  A check failed
+#   2  Help called
+#   3  Called incorrectly (e.g., with wrong parameters)
+#   4  Aborted upon user request
+#   5  Error while interacting with the OS (reading / writing from the filesystem, calling programs, etc.)
+#   6  Error while executing one of the preparatory steps
+#   7  Error internal to this script
 
 export LANG=C  # Engineering English only
 export LC_CTYPE=POSIX
