@@ -157,9 +157,7 @@ do
   QuotedTempDir="$(echo "${TmpDir}/" | sed 's/\//\\\//g')"
   a="$(echo "$i" | sed "s/^${QuotedTempDir}//")"
   RPMname="$(dirname "$a" | grep -o '^[^/]*')"
-  ExRPMs="$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print)"
-  ExSRPMs="$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print)"
-  case "$(echo "$ExRPMs" | wc -l)_$(echo "$ExSRPMs" | wc -l)" in
+  case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
   0_0)
     echo "- Building RPM(s) & SRPM for $RPMname" | tee -a "$Logfile"
     rpmbuild -ba "$i" 2>&1 | tee -a "$Logfile" >&2
