@@ -104,8 +104,8 @@ mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
 do
   # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm +444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
-  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting (instead of -t), but fail in corner cases here
-  Archives="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$' | wc -l)"  # echo does not work (see below for details)!
+  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting (instead of -t or -tcß), but fail in corner cases here
+  Archives="$(echo "$Archive" | grep -v '^$' | wc -l)"
   if [ "$Archives" = "0" ]
   then continue
   elif [ "$Archives" -gt "0" ] 2>/dev/null
@@ -127,7 +127,7 @@ do
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
         Hit="$(find -P "$TmpDir/$b" -type f -perm +444 -name '*.spec' -print)"
-        Hits="$(find -P "$TmpDir/$b" -type f -perm +444 -name '*.spec' -print | wc -l)"  # echo does not work (!; for 0 *and* > 0), bc is not installed by default (for -exec bc ...) and seems unfeasible, expr 
+        Hits="$(echo "$Hit" | grep -v '^$' | wc -l)"
         if [ "$Hits" = "0" ]
         then echo ": No spec-file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
