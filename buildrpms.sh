@@ -36,9 +36,9 @@ then
   exit 3
 fi
 
-TmpDir="$(echo "$Called" | rev | cut -d '.' -f 2- | rev)"
-Logfile="${TmpDir}.log.txt"
-TmpDir="/tmp/$TmpDir"
+a="$(echo "$Called" | rev | cut -d '.' -f 2- | rev)"
+Logfile="${a}.log.txt"
+TmpDir="/tmp/$a"
 if ! touch "$Logfile"
 then
   echo "Aborting: Failed to create logfile!" >&2
