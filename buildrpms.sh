@@ -69,7 +69,7 @@ then
   exit 3
 fi
 
-echo -e "\nFetching tar-archives from download directories" | tee -a "$Logfile"
+echo -e "\nFetching tar archive(s) from download directories:" | tee -a "$Logfile"
 Moved=""
 for i in $(echo "$Targets" | tr ',' '\n')
 do
@@ -98,7 +98,7 @@ then
 else echo "- Nothing." | tee -a "$Logfile"
 fi
 
-echo -e "\nExtracting spec-file from" | tee -a "$Logfile"
+echo -e "\nExtracting spec file(s) from:" | tee -a "$Logfile"
 SpecFiles=""
 mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
@@ -179,7 +179,7 @@ else
   exit 6
 fi
 
-echo -e "\nBuilding (S)RPM(s)" | tee -a "$Logfile"
+echo -e "\nBuilding (S)RPM(s):" | tee -a "$Logfile"
 for i in $SpecFiles
 do
   QuotedTempDir="$(echo "${TmpDir}/" | sed 's/\//\\\//g')"
