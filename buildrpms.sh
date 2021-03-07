@@ -1,6 +1,19 @@
 #!/bin/sh
 set -uC  # Add -e later
 
+# buildrpms.sh expects a comma separated list of tar archive names 
+# without their file name extension(s) (!) as single argument.
+# These archive names may be truncated (i.e., provide only the 
+# beginning of their names) or contain wildcards (e.g., ? * [])!
+# The true archive names (i.e., on the file system) must contain 
+# the string ".tar" as part of their file name extension.
+# Currently also no capital letters (i.e., upper-case characters)
+# or white-space characters are allowed in the argument string or
+# real file names processed.  Allowing for capital letters is easy
+# to resolve (but what for?), but for white-spaces this seems rather
+# hard to accomplish.
+# If no argument is given, buildrpms.sh will use an internal list.
+
 # Exit codes:
 #   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbuild run(s)
 #   1  A check failed
@@ -15,19 +28,6 @@ export LANG=C  # Engineering English only
 export LC_CTYPE=POSIX
 export LC_COLLATE=POSIX
 # export IFS="$(echo -e "\n")"
-
-# buildrpms.sh expects a comma separated list of tar archive names 
-# without their file name extension(s) (!) as single argument.
-# These archive names may be truncated (i.e., provide only the 
-# beginning of their names) or contain wildcards (e.g., ? * [])!
-# The true archive names (i.e., on the file system) must contain 
-# the string ".tar" as part of their file name extension.
-# Currently also no capital letters (i.e., upper-case characters)
-# or white-space characters are allowed in the argument string or
-# real file names processed.  Allowing for capital letters is easy
-# to resolve (but what for?), but for white-spaces this is rather
-# hard.
-# If no argument is given, it will use an internal list.
 
 Called="$(basename "$0")"
 if echo " $(id -un) $(id -Gn) " | fgrep -q ' root '
