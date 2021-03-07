@@ -103,7 +103,7 @@ SpecFiles=""
 mkdir -p "$TmpDir"
 for i in $(echo "$Targets" | tr ',' '\n')
 do
-  # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm +444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
+  # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
   Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting (instead of -t or -tcß), but fail in corner cases here
   Archives="$(echo "$Archive" | grep -v '^$' | wc -l)"
   if [ "$Archives" = "0" ]
@@ -126,7 +126,7 @@ do
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
-        Hit="$(find -P "$TmpDir/$b" -type f -perm +444 -name '*.spec' -print)"
+        Hit="$(find -P "$TmpDir/$b" -type f -perm /444 -name '*.spec' -print)"
         Hits="$(echo "$Hit" | grep -v '^$' | wc -l)"
         if [ "$Hits" = "0" ]
         then echo ": No spec-file found!" | tee -a "$Logfile"
@@ -144,7 +144,7 @@ do
                 else echo -n ": Notice that icon SOURCES/$IconFile exists, but is not usable." | tee -a "$Logfile"
                 fi
               else
-                IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
+                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | sed -n 1P)"
                 if [ -n "$IconPath" ]
                 then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
                 else echo -n ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$Logfile"
