@@ -132,12 +132,25 @@ do
         then echo ": No spec-file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
         then
-          if x="$(fgrep 'Icon:' "$Hit")"
+          if x="$(grep -o 'Icon:[^#]*' "$Hit")"
           then
-            IconFile="$(echo "$x" | grep -o 'Icon:[^#]*' | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
-            IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
-            [ ! -e "SOURCES/$IconFile" ] && ln -s "$IconPath" "SOURCES/$IconFile"
-            sed -i 's/# *Icon:/Icon:/' "$Hit"
+            IconFile="$(echo "$x" | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
+            if [ -n "$IconFile" ]
+            then
+              if [ -e "SOURCES/$IconFile" ]
+              then
+                if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
+                then sed -i 's/##* *Icon:/Icon:/' "$Hit"
+                else echo "Notice: Icon SOURCES/$IconFile exists, but is not usable."
+                fi
+              else
+                IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
+                if [ -n "$IconPath" ]
+                then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
+                else echo "Notice: Icon $IconFile referenced in $Hit, but not found in $ThisArch."
+                fi
+              fi
+            fi
           fi
           SpecFiles="$(echo -e "${SpecFiles}\n$Hit")"
           echo | tee -a "$Logfile"
