@@ -141,13 +141,13 @@ do
               then
                 if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
                 then sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else echo "Notice: Icon SOURCES/$IconFile exists, but is not usable."
+                else echo -n ": Notice that icon SOURCES/$IconFile exists, but is not usable." | tee -a "$Logfile"
                 fi
               else
                 IconPath="$(find -P "$TmpDir/$b" -type f -perm +444 -name "$IconFile" -print | sed -n 1P)"
                 if [ -n "$IconPath" ]
                 then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else echo "Notice: Icon $IconFile referenced in $Hit, but not found in $ThisArch."
+                else echo -n ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$Logfile"
                 fi
               fi
             fi
