@@ -180,9 +180,9 @@ else
 fi
 
 echo -e "\nBuilding (S)RPM(s):" | tee -a "$Logfile"
+QuotedTempDir="$(echo "${TmpDir}/" | sed 's/\//\\\//g')"
 for i in $SpecFiles
 do
-  QuotedTempDir="$(echo "${TmpDir}/" | sed 's/\//\\\//g')"
   a="$(echo "$i" | sed "s/^${QuotedTempDir}//")"
   RPMname="$(dirname "$a" | grep -o '^[^/]*')"
   case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
