@@ -81,7 +81,7 @@ do
       then echo "- Warning: Ignoring ${j}, because SOURCES/$Archive already exists." | tee -a "$Logfile"
       else
         echo "- $j" | tee -a "$Logfile"
-        mkdir -p SOURCES
+        mkdir -p SOURCES  # ToDo: Stop creating any directory, instead test for their existance at the start!
         mv "$j" SOURCES/
         Moved="${Moved},$(echo "$Archive" | sed 's/\.tar.*$//')"
       fi
