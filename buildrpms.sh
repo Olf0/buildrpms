@@ -36,9 +36,8 @@ then
   exit 3
 fi
 
-a="$(echo "$Called" | rev | cut -d '.' -f 2- | rev)"
-Logfile="${a}.log.txt"
-TmpDir="/tmp/$a"
+ProgramName="$(echo "$Called" | rev | cut -d '.' -f 2- | rev)"
+Logfile="${ProgramName}.log.txt"
 if ! touch "$Logfile"
 then
   echo "Aborting: Failed to create logfile!" >&2
@@ -100,7 +99,7 @@ fi
 
 echo -e "\nExtracting spec file(s) from:" | tee -a "$Logfile"
 SpecFiles=""
-mkdir -p "$TmpDir"
+TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
 for i in $(echo "$Targets" | tr ',' '\n')
 do
   # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
