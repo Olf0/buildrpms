@@ -49,7 +49,7 @@ if [ -n "$*" ]
 then
   Targets="$1"
   Fuzzy=No
-  if echo "$Targets" | tr ',' '\n' | grep -vq '^[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][+.0-9_a-z~-]*$'
+  if echo "$Targets" | tr ',' '\n' | grep -vxq '[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][+.0-9_a-z~-]*'
   then Fuzzy=Yes
   fi
 else
@@ -103,24 +103,24 @@ TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
 for i in $(echo "$Targets" | tr ',' '\n')
 do
   # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
-  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -v '^$')"  # ls' options -vr also looked interesting (instead of -t or -tcß), but fail in corner cases here
-  Archives="$(echo "$Archive" | grep -v '^$' | wc -l)"
+  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -vx '')"  # ls' options -vr also looked interesting (instead of -t or -tcß), but fail in corner cases here
+  Archives="$(echo "$Archive" | grep -vx '' | wc -l)"
   if [ "$Archives" = "0" ]
   then continue
   elif [ "$Archives" -gt "0" ] 2>/dev/null
   then
   #if [ "$Fuzzy" != "No" ]
-  #then Archive="$(echo "$Archive" | sed -n 1P)"
+  #then Archive="$(echo "$Archive" | head -1)"
   #fi
-    PrevArch="$(echo "$Archive" | sed -n 1P)"
+    PrevArch="$(echo "$Archive" | head -1)"
     a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
-    c="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
-    e="$(echo "$a" | grep '^[a-z][+0-9_a-z-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
+    c="$(echo "$a" | grep -x '[a-z][+0-9_a-z-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
+    e="$(echo "$a" | grep -x '[a-z][+0-9_a-z-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
     for ThisArch in $Archive
     do
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
-      d="$(echo "$b" | grep '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
-      f="$(echo "$b" | grep '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*$' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
+      d="$(echo "$b" | grep -x '[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
+      f="$(echo "$b" | grep -x '[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
       if [ -n "$f" -a "$f" = "$e" ] || [ -n "$d" -a "$Fuzzy" = "No" -a "$d" = "$c" ] || [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ]  # Last statement is for detecting the first loop run
       then
         echo -n "- $ThisArch" | tee -a "$Logfile"
@@ -171,7 +171,7 @@ do
 done
 if [ -n "$SpecFiles" ]
 then
-  SpecFiles="$(echo "$SpecFiles" | grep -v '^$')"
+  SpecFiles="$(echo "$SpecFiles" | grep -vx '')"
 else
   echo "Aborting: Not a single spec-file found!" | tee -a "$Logfile" >&2
   rm -rf "$TmpDir"
