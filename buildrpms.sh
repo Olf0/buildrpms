@@ -147,7 +147,7 @@ do
                 else printf '%s' ": Notice that icon SOURCES/$IconFile exists, but is not usable." | tee -a "$Logfile"
                 fi
               else
-                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | sed -n 1P)"
+                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
                 if [ -n "$IconPath" ]
                 then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
                 else printf '%s' ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$Logfile"
@@ -175,7 +175,7 @@ do
 done
 if [ -n "$SpecFiles" ]
 then
-  SpecFiles="$(printf '%s' "$SpecFiles")"
+  SpecFiles="$(printf '%s' "$SpecFiles" | grep -vx '')"
 else
   printf '%s\n' "Aborting: Not a single spec-file found!" | tee -a "$Logfile" >&2
   rm -rf "$TmpDir"
