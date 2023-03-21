@@ -133,7 +133,7 @@ do
         then
           if x="$(grep -o 'Icon:[^#]*' "$Hit")"
           then
-            IconFile="$(echo "$x" | sed -n 1P | sed 's/Icon://' | sed 's/[[:space:]]//g')"
+            IconFile="$(echo "$x" | head -1 | sed 's/Icon://' | sed 's/[[:space:]]//g')"
             if [ -n "$IconFile" ]
             then
               if [ -e "SOURCES/$IconFile" ]
@@ -143,7 +143,7 @@ do
                 else echo -n ": Notice that icon SOURCES/$IconFile exists, but is not usable." | tee -a "$Logfile"
                 fi
               else
-                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | sed -n 1P)"
+                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
                 if [ -n "$IconPath" ]
                 then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
                 else echo -n ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$Logfile"
