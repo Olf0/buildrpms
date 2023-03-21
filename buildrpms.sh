@@ -97,7 +97,7 @@ then
 else printf '%s\n' "- Nothing." | tee -a "$Logfile"
 fi
 
-printf '\n%s\n' "\nExtracting spec file(s) from:" | tee -a "$Logfile"
+printf '\n%s\n' "Extracting spec file(s) from:" | tee -a "$Logfile"
 SpecFiles=""
 TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
 for i in $(printf '%s' "$Targets" | tr ',' '\n')
