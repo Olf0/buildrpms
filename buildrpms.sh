@@ -126,7 +126,7 @@ do
         printf '%s' "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
         Hit="$(find -P "$TmpDir/$b" -type f -perm /444 -name '*.spec' -print)"
-        Hits="$(printf '%s' "$Hit" | grep -v '^$' | wc -l)"
+        Hits="$(printf '%s' "$Hit" | grep -vx '' | wc -l)"
         if [ "$Hits" = "0" ]
         then printf '%s\n' ": No spec-file found!" | tee -a "$Logfile"
         elif [ "$Hits" = "1" ]
