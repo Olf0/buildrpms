@@ -125,7 +125,7 @@ do
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
       d="$(printf '%s' "$b" | grep -x '[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
       f="$(printf '%s' "$b" | grep -x '[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
-      if [ -n "$f" -a "$f" = "$e" ] || [ -n "$d" -a "$Fuzzy" = "No" -a "$d" = "$c" ] || [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ]  # Last statement is for detecting the first loop run
+      if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
       then
         printf '%s' "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
