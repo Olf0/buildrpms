@@ -52,11 +52,13 @@ printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$Logfile"
 if [ -n "$*" ]
 then
   Targets="$1"
-  Fuzzy=No# Minimum requirements of RPM for %{name}-%{version} strings, according to
+  Fuzzy=No
+  # Minimum requirements of RPM for %{name}-%{version} strings, according to
   # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
   # [[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
   # This also covers %{name}-%{version}-%{release} strings.
-  if printf %s "$Targets" | tr ',' '\n' | grep -vxq '[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*'
+  # Below my stronger, but usual requirements for "fuzzy evaluation":
+  if printf %s "$Targets" | tr ',' '\n' | grep -vxq '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]*'
   then Fuzzy=Yes
   fi
 else
@@ -121,13 +123,13 @@ do
   #fi
     PrevArch="$(printf '%s' "$Archive" | head -1)"
     a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
-    c="$(printf '%s' "$a" | grep -x '[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*' | grep -o '^[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]')"
-    e="$(printf '%s' "$a" | grep -x '[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*fos')"
+    c="$(printf '%s' "$a" | grep -x '[[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
+    e="$(printf '%s' "$a" | grep -x '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
     for ThisArch in $Archive
     do
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
-      d="$(printf '%s' "$b" | grep -x '[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
-      f="$(printf '%s' "$b" | grep -x '[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[[:alnum:]][[:alnum:]+_~-]*-[[:digit:]][[:alnum:]+_~^]*fos')"
+      d="$(printf '%s' "$b" | grep -x '[[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
+      f="$(printf '%s' "$b" | grep -x '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
       if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
       then
         printf '%s' "- $ThisArch" | tee -a "$Logfile"
