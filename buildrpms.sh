@@ -2,17 +2,21 @@
 set -uC  # Add -e later
 
 # buildrpms.sh expects a comma separated list of tar archive names 
-# without their file name extension(s) (!) as single argument.
+# without their file name extension(s) (!) as each item.
 # These archive names may be truncated (i.e., provide only the 
 # beginning of their names) or contain wildcards (e.g., ? * [])!
+# If they are truncated the must start with a alpha character
+# (i.e., '[a-zA-Z]') and must contain the beginning of a version
+# indicator, i.e., '-[-0-9]'.
 # The true archive names (i.e., on the file system) must contain 
-# the string ".tar" as part of their file name extension.
-# Currently also no capital letters (i.e., upper-case characters)
-# or white-space characters are allowed in the argument string or
-# real file names processed.  Allowing for capital letters is easy
-# to resolve (but what for?), but for white-spaces this seems rather
-# hard to accomplish.
+# the string ".tar" as first part of their file name extension.
+# No white-space or control characters are allowed in the argument
+# string or real file names processed.
 # If no argument is given, buildrpms.sh will use an internal list.
+# Generally the "name-version" scheme and the character sets used
+# for either "name" and "version", shall adhere to the RPM spec-
+# file specification:
+# https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
 
 # Exit codes:
 #   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbuild run(s)
@@ -40,25 +44,30 @@ ProgramName="$(printf '%s' "$Called" | rev | cut -d '.' -f 2- | rev)"
 Logfile="${ProgramName}.log.txt"
 if ! touch "$Logfile"
 then
-  printf '%s\n' "Aborting: Failed to create logfile!" >&2
+  printf '%s\n' 'Aborting: Failed to create logfile!' >&2
   exit 3
 fi
-printf '%s\n' "Starting $Called at $(date)" | tee "$Logfile"
+printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$Logfile"
 
 if [ -n "$*" ]
 then
   Targets="$1"
   Fuzzy=No
-  if printf '%s' "$Targets" | tr ',' '\n' | grep -vxq '[a-z][+0-9_a-z-]*[+0-9_a-z]-[0-9][+.0-9_a-z~-]*'
+  # Minimum requirements of RPM for %{name}-%{version} strings, according to
+  # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
+  # [[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
+  # This also covers %{name}-%{version}-%{release} strings.
+  # Below my stronger, but usual requirements for "fuzzy evaluation":
+  if printf %s "$Targets" | tr ',' '\n' | grep -vxq '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]*'
   then Fuzzy=Yes
   fi
 else
   Targets='crypto-sdcard,mount-sdcard,sfos-upgrade'
   Fuzzy=Yes
 fi
-if printf '%s' "$Targets" | egrep -q '[[:space:]]|[[:upper:]]'
+if printf '%s' "$Targets" | egrep -q '[[:space:]]|[[:cntrl:]]'
 then
-  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space or upper-case character!" | tee -a "$Logfile" >&2
+  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space or control character!" | tee -a "$Logfile" >&2
   exit 3
 fi
 shift
@@ -68,7 +77,7 @@ then
   exit 3
 fi
 
-printf '\n%s\n' "Fetching tar archive(s) from download directories:" | tee -a "$Logfile"
+printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
 Moved=""
 for i in $(printf '%s' "$Targets" | tr ',' '\n')
 do
@@ -94,53 +103,53 @@ then
   printf '%s\n' "Notice: Using solely \"${Moved}\" as target(s)." | tee -a "$Logfile"
   Targets="$Moved"
   Fuzzy=No
-else printf '%s\n' "- Nothing." | tee -a "$Logfile"
+else printf '%s\n' '- Nothing.' | tee -a "$Logfile"
 fi
 
-printf '\n%s\n' "Extracting spec file(s) from:" | tee -a "$Logfile"
+printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$Logfile"
 SpecFiles=""
 TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
 for i in $(printf '%s' "$Targets" | tr ',' '\n')
 do
   # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
-  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$' | grep -v ':$' | grep -vx '')"  # ls' options -vr also looked interesting (instead of -t or -tcß), but fail in corner cases here
-  Archives="$(printf '%s' "$Archive" | grep -vx '' | wc -l)"
-  if [ "$Archives" = "0" ]
+  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here; -F is an unneeded superset of -p.
+  Archives="$(printf '%s' "$Archive" | wc -l)"
+  if [ "$Archives" = 0 ]
   then continue
-  elif [ "$Archives" -gt "0" ] 2>/dev/null
+  elif [ "$Archives" -gt 0 ] 2>/dev/null
   then
   #if [ "$Fuzzy" != "No" ]
   #then Archive="$(printf '%s' "$Archive" | head -1)"
   #fi
     PrevArch="$(printf '%s' "$Archive" | head -1)"
     a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
-    c="$(printf '%s' "$a" | grep -x '[a-z][+0-9_a-z-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
-    e="$(printf '%s' "$a" | grep -x '[a-z][+0-9_a-z-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
+    c="$(printf '%s' "$a" | grep -x '[[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
+    e="$(printf '%s' "$a" | grep -x '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
     for ThisArch in $Archive
     do
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
-      d="$(printf '%s' "$b" | grep -x '[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~]')"
-      f="$(printf '%s' "$b" | grep -x '[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos[1-9][+.0-9_a-z~-]*' | grep -o '^[a-z][+0-9_a-z~-]*[+0-9_a-z~]-[0-9][+.0-9_a-z~]*[+0-9_a-z~]-[+0-9_a-z~][+.0-9_a-z~-]*fos')"
-      if [ -n "$f" -a "$f" = "$e" ] || [ -n "$d" -a "$Fuzzy" = "No" -a "$d" = "$c" ] || [ -n "$ThisArch" -a "$ThisArch" = "$PrevArch" ]  # Last statement is for detecting the first loop run
+      d="$(printf '%s' "$b" | grep -x '[[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
+      f="$(printf '%s' "$b" | grep -x '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
+      if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
       then
         printf '%s' "- $ThisArch" | tee -a "$Logfile"
         tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
         Hit="$(find -P "$TmpDir/$b" -type f -perm /444 -name '*.spec' -print)"
-        Hits="$(printf '%s' "$Hit" | grep -vx '' | wc -l)"
-        if [ "$Hits" = "0" ]
-        then printf '%s\n' ": No spec-file found!" | tee -a "$Logfile"
-        elif [ "$Hits" = "1" ]
+        Hits="$(printf '%s' "$Hit" | wc -l)"
+        if [ "$Hits" = 0 ]
+        then printf '%s\n' ': No spec-file found!' | tee -a "$Logfile"
+        elif [ "$Hits" = 1 ]
         then
           if x="$(grep -o 'Icon:[^#]*' "$Hit")"
           then
-            IconFile="$(printf '%s' "$x" | head -1 | sed 's/Icon://' | sed 's/[[:space:]]//g')"
+            IconFile="$(printf '%s' "$x" | head -1 | sed -e 's/Icon://' -e 's/^[[:blank:]]*//')"
             if [ -n "$IconFile" ]
             then
               if [ -e "SOURCES/$IconFile" ]
               then
                 if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
                 then sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon SOURCES/$IconFile exists, but is not usable." | tee -a "$Logfile"
+                else printf '%s' ": Notice that icon referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$Logfile"
                 fi
               else
                 IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
@@ -153,9 +162,9 @@ do
           fi
           SpecFiles="$(printf '%s\n%s' "$SpecFiles" "$Hit")"
           printf '\n' | tee -a "$Logfile"
-        elif [ "$Hits" -gt "1" ] 2>/dev/null
-        then printf '%s\n' ": More than one spec-file found, ignoring them all!" | tee -a "$Logfile"
-        else printf '%s\n' ": Failed to find a spec-file!" | tee -a "$Logfile"
+        elif [ "$Hits" -gt 1 ] 2>/dev/null
+        then printf '%s\n' ': More than one spec-file found, ignoring them all!' | tee -a "$Logfile"
+        else printf '%s\n' ': Failed to find a spec-file!' | tee -a "$Logfile"
         fi
       else break
       fi
@@ -164,21 +173,21 @@ do
       c="$d"
       e="$f"
     done
-  #elif [ "$Archives" -gt "1" ] 2>/dev/null
+  #elif [ "$Archives" -gt 1 ] 2>/dev/null
   #then printf '%s\n' "Notice: More than one matching archive for a single target found, ignoring them all: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
-  else printf '%s\n' "Notice: Failed to find an archive per provided target(s), see: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
+  else printf '%s\n' "Notice: Failed to find an archive via provided target(s), see: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
   fi
 done
 if [ -n "$SpecFiles" ]
 then
   SpecFiles="$(printf '%s' "$SpecFiles" | grep -vx '')"
 else
-  printf '%s\n' "Aborting: Not a single spec-file found!" | tee -a "$Logfile" >&2
+  printf '%s\n' 'Aborting: Not a single spec-file found!' | tee -a "$Logfile" >&2
   rm -rf "$TmpDir"
   exit 6
 fi
 
-printf '\n%s\n' "Building (S)RPM(s):" | tee -a "$Logfile"
+printf '\n%s\n' 'Building (S)RPM(s):' | tee -a "$Logfile"
 QuotedTempDir="$(printf '%s' "${TmpDir}/" | sed 's/\//\\\//g')"
 for i in $SpecFiles
 do
@@ -188,22 +197,22 @@ do
   0_0)
     printf '%s' "- Building RPM(s) & SRPM for $RPMname" | tee -a "$Logfile"
     if rpmbuild -v -ba "$i" >> "$Logfile" 2>&1
-    then printf '%s\n' ": success."
-    else printf '%s\n' ": failed!"
+    then printf '%s\n' ': success.'
+    else printf '%s\n' ': failed!'
     fi
     ;;
   0_*)
     printf '%s' "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$Logfile"
     if rpmbuild -v -bb "$i" >> "$Logfile" 2>&1
-    then printf '%s\n' ": success."
-    else printf '%s\n' ": failed!"
+    then printf '%s\n' ': success.'
+    else printf '%s\n' ': failed!'
     fi
     ;;
   *_0)
     printf '%s' "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$Logfile"
     if rpmbuild -v -bs "$i" >> "$Logfile" 2>&1
-    then printf '%s\n' ": success."
-    else printf '%s\n' ": failed!"
+    then printf '%s\n' ': success.'
+    else printf '%s\n' ': failed!'
     fi
     ;;
   *_*)
