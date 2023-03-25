@@ -55,10 +55,10 @@ then
   Fuzzy=No
   # Minimum requirements of RPM for %{name}-%{version} strings, according to
   # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
-  # [[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
+  # [[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
   # This also covers %{name}-%{version}-%{release} strings.
   # Below my stronger, but usual requirements for "fuzzy evaluation":
-  if printf %s "$Targets" | tr ',' '\n' | grep -vxq '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]*'
+  if printf %s "$Targets" | tr ',' '\n' | grep -vxq '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*'
   then Fuzzy=Yes
   fi
 else
@@ -77,6 +77,9 @@ then
   exit 3
 fi
 
+# #  ="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
+# Use:  ="$(ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
+  
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
 Moved=""
 for i in $(printf '%s' "$Targets" | tr ',' '\n')
@@ -123,13 +126,13 @@ do
   #fi
     PrevArch="$(printf '%s' "$Archive" | head -1)"
     a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
-    c="$(printf '%s' "$a" | grep -x '[[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
-    e="$(printf '%s' "$a" | grep -x '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
+    c="$(printf '%s' "$a" | grep -x '[[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
+    e="$(printf '%s' "$a" | grep -x '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
     for ThisArch in $Archive
     do
       b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
-      d="$(printf '%s' "$b" | grep -x '[[:graph:.+_~-]][[:graph:].+_~-]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
-      f="$(printf '%s' "$b" | grep -x '[[:alnum:]][[:alnum:].+_~-]*-[[:digit:]][[:alnum:].+_~^]')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
+      d="$(printf '%s' "$b" | grep -x '[[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
+      f="$(printf '%s' "$b" | grep -x '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
       if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
       then
         printf '%s' "- $ThisArch" | tee -a "$Logfile"
