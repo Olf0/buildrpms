@@ -49,12 +49,6 @@ then
 fi
 printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$Logfile"
 
-Fuzzy=N
-# if [ "$1" = "--fuzzy" ]
-# then
-#   Fuzzy=Y
-#   shift
-# fi
 Inplace=N
 case "$1" in
 -i|--in-place)
@@ -85,6 +79,7 @@ then
   exit 3
 fi
 
+Fuzzy=N
 # Quote each line and append "*" to fuzzy entries.
 # Both Path- and File-Targets will only be expanded, where necessary.
 if ! printf '%s' "$Targets" | grep -vxq '[/[:alnum:]][- +./[:alnum:]_~^]*'
@@ -133,6 +128,7 @@ done
 
 # Ultimately determining archives or spec files to process
 ZTargets=""
+STargets=""
 for i in $RTargets
 do
   # Specfile="$(tar --wildcards -tf "$filepath" 'rpm/*.spec')"
@@ -142,7 +138,13 @@ do
     if [ "$Inplace" = Y ]
     then ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
     elif [ "$(printf '%s' "$i" | wc -l)" = 1 ]
-    then ZTargets="$(printf "'%s'\n%s" "$Specfile" "$ZTargets")"
+    then # STargets and ZTargets lists MUST be synchronised, if Inplace!=Y; i.e.,
+         # each line in both variables MUST correspond to each other, hence solely
+         # a single spec file pro archive file is allowed.
+         # Alternatively the first spec file found can be selected above by, e.g.,
+         # Specfile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
+         ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
+         STargets="$(printf "'%s'\n%s" "$Specfile" "$STargets")"
     else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
     fi
   fi
