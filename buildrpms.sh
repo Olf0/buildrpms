@@ -55,6 +55,17 @@ Fuzzy=N
 #   Fuzzy=Y
 #   shift
 # fi
+Inplace=N
+case "$1" in
+-i|--in-place)
+  Inplace=Y
+  shift
+  ;;
+-\?|--help)
+  printf '%s\n' "Help text for $called not yet written." >&2
+  exit 2
+  ;;
+esac
 
 if [ -n "$2" ]
 then
@@ -78,45 +89,46 @@ fi
 if ! printf %s "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
 then
   Fuzzy=Y
-  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/*"/')"
-  PTargets="$(printf %s "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/*"/')"
+  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/*'/")"
+  PTargets="$(printf %s "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/*'/")"
 else
-  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/"/')"
-  PTargets="$(printf %s "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/"/')"
+  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/'/")"
+  PTargets="$(printf %s "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/'/")"
 fi
 
 # Expand PathTargets & check them coarsly
 RTargets=""
 for i in $PTargets
 do
-  if ! file -L --mime-type $i | grep '^application/'
+  if ! eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n%s' $i "$RTargets")"
+  RTargets="$(eval printf "\'%s\''\n%s'" "$i" '"$RTargets"')"
 done
 
 # Search for FileTargets
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
 DDirs='. ~/Downloads ~/android_storage/Download'
 gTargets=""
-# ="$(find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
-# ="$(find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr)"
+# find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime.
+# find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
 for i in $FTargets
 do
-  gTargets="$(find -L $DDirs -type f ! -executable ! -empty -perm /444 -name $i -printf '"%p"\n' 2> /dev/null)$gTargets"
+  gTargets="$(eval find -L "$DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
 done
 for i in $gTargets
 do
-  if ! file -L --mime-type $i | grep '^application/'
+  if ! eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n%s' $i "$RTargets")"
+  RTargets="$(eval printf "\'%s\''\n%s'" "$i" '"$RTargets"')"
 done
 
 for i in $RTargets
 do
 
-# Specfile="$(tar --wildcards -tf "$filepath" '*.spec')"
+# Specfile="$(tar --wildcards -tf "$filepath" 'rpm/*.spec')"
+# Specfile="$(tar -tf "$filepath" '*.spec' | grep -x 'rpm/.*\.spec')"
 
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
 # For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
@@ -185,7 +197,7 @@ do
       if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
       then
         printf '%s' "- $ThisArch" | tee -a "$Logfile"
-        tar -C "$TmpDir" -xf "$ThisArch" 2>&1 | tee -a "$Logfile"
+        tar -C "$TmpDir" -xof "$ThisArch" 2>&1 | tee -a "$Logfile"
         Hit="$(find -P "$TmpDir/$b" -type f -perm /444 -name '*.spec' -print)"
         Hits="$(printf '%s' "$Hit" | wc -l)"
         if [ "$Hits" = 0 ]
