@@ -1,18 +1,18 @@
 #!/bin/sh
 set -uC  # Add -e later
 
-# buildrpms.sh expects a comma separated list of tar archive names 
-# without their file name extension(s) (!) as each item.
-# These archive names may be truncated (i.e., provide only the 
-# beginning of their names) or contain wildcards (e.g., ? * [])!
-# If they are truncated the must start with a alpha character
-# (i.e., '[a-zA-Z]') and must contain the beginning of a version
-# indicator, i.e., '-[-0-9]'.
-# The true archive names (i.e., on the file system) must contain 
-# the string ".tar" as first part of their file name extension.
-# No white-space or control characters are allowed in the argument
-# string or real file names processed.
+#        1         2         3         4         5         6         7         8
+#2345678901234567890123456789012345678901234567890123456789012345678901234567890
+
+# buildrpms.sh expects a comma separated list of tar archive names or paths as
+# each item.  The archive names may either be truncated (i.e., provide only the 
+# beginning of their names) or contain shell type wildcards (? * []).  No
+# white-space or control characters are allowed in the argument string or real
+# file names processed, except for the simple space character (which must be
+# quoted) in the argument string.
+# buildrpms.sh currently only recogises a single option, "--fuzzy".
 # If no argument is given, buildrpms.sh will use an internal list.
+
 # Generally the "name-version" scheme and the character sets used
 # for either "name" and "version", shall adhere to the RPM spec-
 # file specification:
@@ -49,40 +49,69 @@ then
 fi
 printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$Logfile"
 
-if [ -n "$*" ]
-then
-  Targets="$1"
-  Fuzzy=No
-  # Minimum requirements of RPM for %{name}-%{version} strings, according to
-  # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
-  # [[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
-  # This also covers %{name}-%{version}-%{release} strings.
-  # Below my stronger, but usual requirements for "fuzzy evaluation":
-  if printf %s "$Targets" | tr ',' '\n' | grep -vxq '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*'
-  then Fuzzy=Yes
-  fi
-else
-  Targets='crypto-sdcard,mount-sdcard,sfos-upgrade'
-  Fuzzy=Yes
-fi
-if printf '%s' "$Targets" | egrep -q '[[:space:]]|[[:cntrl:]]'
-then
-  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space or control character!" | tee -a "$Logfile" >&2
-  exit 3
-fi
-shift
-if [ -n "$*" ]
+Fuzzy=N
+# if [ "$1" = "--fuzzy" ]
+# then
+#   Fuzzy=Y
+#   shift
+# fi
+
+if [ -n "$2" ]
 then
   printf '%s\n' "Aborting: No extra arguments expected, but called with \"${*}\"." | tee -a "$Logfile" >&2
   exit 3
+elif [ -n "$1" ]
+then
+  Targets="$1"
+else
+  Targets='crypto-sdcard,mount-sdcard,sfos-upgrade'
+fi
+Targets="$(printf %s "$Targets" | tr ',' '\n')"
+
+if printf '%s' "$Targets" | tr ' ' '_' | egrep -q '[[:space:]]|[[:cntrl:]]'
+then
+  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space other than the simple space or control character!" | tee -a "$Logfile" >&2
+  exit 3
 fi
 
-# #  ="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
-# Use:  ="$(ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
-  
+if ! printf %s "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
+then
+  Fuzzy=Y
+  FTargets="$(printf %s "$Targets" | fgrep -v / | sed 's/$/*/')"
+  PTargets="$(printf %s "$Targets" | fgrep / | sed 's/$/*/')"
+else
+  FTargets="$(printf %s "$Targets" | fgrep -v /)"
+  PTargets="$(printf %s "$Targets" | fgrep /)"
+fi
+
+# Expand PathTargets & check them coarsly
+RTargets=""
+for i in $PTargets
+do
+  if ! file --mime-type "$i" | grep '^application/'
+  then continue
+  fi
+  RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
+done
+
+# Search for FileTargets
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
+DDirs='. ~/Downloads ~/android_storage/Download'
+DTargets=""
+# ="$(find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
+# ="$(find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr)"
+for i in $(printf '%s' "$FTargets" | sed -e "s/^/'/" -e "s/$/'/")
+do
+  DTargets="$(find -L $DDirs -type f ! -executable ! -empty -perm /444 -name $i -print 2> /dev/null)$Dtargets"
+done
+
+# #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
+# For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
+# For "maxdepth=2":  ="$(ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
+# For no "maxdepth": ="$(ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
+
 Moved=""
-for i in $(printf '%s' "$Targets" | tr ',' '\n')
+for i in $(printf '%s' "$Targets" | sed -e "s/^/'/" -e "s/$/'/")
 do
   for j in ~/android_storage/Download/${i}*.tar* ~/Downloads/${i}*.tar*  # Hardcoded!
   do
@@ -108,6 +137,13 @@ then
   Fuzzy=No
 else printf '%s\n' '- Nothing.' | tee -a "$Logfile"
 fi
+
+  # Minimum requirements of RPM for %{name}-%{version} strings, according to
+  # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
+  # [[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
+  # This also covers %{name}-%{version}-%{release} strings.
+  # Below my stronger, but usual requirements:
+  # [[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*'
 
 printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$Logfile"
 SpecFiles=""
