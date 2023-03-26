@@ -86,24 +86,24 @@ then
 fi
 
 # Quote each line and append "*" to fuzzy entries
-if ! printf %s "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
+if ! printf '%s' "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
 then
   Fuzzy=Y
-  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/*'/")"
-  PTargets="$(printf %s "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/*'/")"
+  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/*'/")"
+  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/*'/")"
 else
-  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/'/")"
-  PTargets="$(printf %s "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/'/")"
+  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/'/")"
+  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/'/")"
 fi
 
 # Expand PathTargets & check them coarsly
 RTargets=""
 for i in $PTargets
 do
-  if ! eval file -L --mime-type "$i" | grep '^application/'
+  if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(eval printf "\'%s\''\n%s'" "$i" '"$RTargets"')"
+  RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
 done
 
 # Search for FileTargets
@@ -118,10 +118,10 @@ do
 done
 for i in $gTargets
 do
-  if ! eval file -L --mime-type "$i" | grep '^application/'
+  if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(eval printf "\'%s\''\n%s'" "$i" '"$RTargets"')"
+  RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
 done
 
 for i in $RTargets
