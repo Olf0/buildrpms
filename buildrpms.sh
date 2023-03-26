@@ -74,36 +74,49 @@ then
   exit 3
 fi
 
+# Quote each line and append "*" to fuzzy entries
 if ! printf %s "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
 then
   Fuzzy=Y
-  FTargets="$(printf %s "$Targets" | fgrep -v / | sed 's/$/*/')"
-  PTargets="$(printf %s "$Targets" | fgrep / | sed 's/$/*/')"
+  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/*"/')"
+  PTargets="$(printf %s "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/*"/')"
 else
-  FTargets="$(printf %s "$Targets" | fgrep -v /)"
-  PTargets="$(printf %s "$Targets" | fgrep /)"
+  FTargets="$(printf %s "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/"/')"
+  PTargets="$(printf %s "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/"/')"
 fi
 
 # Expand PathTargets & check them coarsly
 RTargets=""
 for i in $PTargets
 do
-  if ! file --mime-type "$i" | grep '^application/'
+  if ! file -L --mime-type $i | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
+  RTargets="$(printf '%s\n%s' $i "$RTargets")"
 done
 
 # Search for FileTargets
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
 DDirs='. ~/Downloads ~/android_storage/Download'
-DTargets=""
+gTargets=""
 # ="$(find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
 # ="$(find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr)"
-for i in $(printf '%s' "$FTargets" | sed -e "s/^/'/" -e "s/$/'/")
+for i in $FTargets
 do
-  DTargets="$(find -L $DDirs -type f ! -executable ! -empty -perm /444 -name $i -print 2> /dev/null)$Dtargets"
+  gTargets="$(find -L $DDirs -type f ! -executable ! -empty -perm /444 -name $i -printf '"%p"\n' 2> /dev/null)$gTargets"
 done
+for i in $gTargets
+do
+  if ! file -L --mime-type $i | grep '^application/'
+  then continue
+  fi
+  RTargets="$(printf '%s\n%s' $i "$RTargets")"
+done
+
+for i in $RTargets
+do
+
+# Specfile="$(tar --wildcards -tf "$filepath" '*.spec')"
 
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
 # For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
