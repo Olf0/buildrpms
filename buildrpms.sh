@@ -87,7 +87,7 @@ fi
 
 # Quote each line and append "*" to fuzzy entries.
 # Both Path- and File-Targets will only be expanded, where necessary.
-if ! printf '%s' "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
+if ! printf '%s' "$Targets" | grep -vxq '[/[:alnum:]][- +./[:alnum:]_~^]*'
 then
   Fuzzy=Y
   FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/*'/")"
@@ -97,7 +97,7 @@ else
   PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/'/")"
 fi
 
-# Expand PathTargets & check them coarsly
+# Check PathTargets coarsly
 RTargets=""
 for i in $PTargets
 do
@@ -143,12 +143,55 @@ do
     then ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
     elif [ "$(printf '%s' "$i" | wc -l)" = 1 ]
     then ZTargets="$(printf "'%s'\n%s" "$Specfile" "$ZTargets")"
-    else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
+    else printf '%s\n        %s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
     fi
   fi
 done
-  
-  
+
+# Building the (S)RPMs
+if [ "$Inplace" = Y ]
+then
+  for i in $ZTargets
+  do
+    j="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
+    case "$(find -L RPMS -maxdepth 2 -name "${j}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${j}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
+    0_0)
+      printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$Logfile"
+      if eval eval rpmbuild -v -ta "$i" >> '"$Logfile"' 2>&1
+      then printf '%s\n' ': success.'
+      else printf '%s\n' ': failed!'
+      fi
+      ;;
+    0_*)
+      printf '%s' "- Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$Logfile"
+      if eval eval rpmbuild -v -tb "$i" >> '"$Logfile"' 2>&1
+      then printf '%s\n' ': success.'
+      else printf '%s\n' ': failed!'
+      fi
+      ;;
+    *_0)
+      printf '%s' "- Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$Logfile"
+      if eval eval rpmbuild -v -ts "$i" >> '"$Logfile"' 2>&1
+      then printf '%s\n' ': success.'
+      else printf '%s\n' ': failed!'
+      fi
+      ;;
+    *_*)
+     printf '%s\n' "- Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$Logfile"
+      ;;
+    *)
+      printf '%s\n' "Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$Logfile" 2>&1
+      ;;
+    esac
+  done
+else
+  for i in $ZTargets
+  do
+    
+
+
+
+
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
 # For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
 # For "maxdepth=2":  ="$(ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
