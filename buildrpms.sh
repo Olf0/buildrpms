@@ -143,7 +143,7 @@ do
     then ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
     elif [ "$(printf '%s' "$i" | wc -l)" = 1 ]
     then ZTargets="$(printf "'%s'\n%s" "$Specfile" "$ZTargets")"
-    else printf '%s\n        %s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
+    else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
     fi
   fi
 done
