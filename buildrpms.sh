@@ -85,7 +85,8 @@ then
   exit 3
 fi
 
-# Quote each line and append "*" to fuzzy entries
+# Quote each line and append "*" to fuzzy entries.
+# Both Path- and File-Targets will only be expanded, where necessary.
 if ! printf '%s' "$Targets" | grep -vxq '[[:alnum:]/][-[:alnum:]/ .+_~^]*'
 then
   Fuzzy=Y
@@ -108,13 +109,19 @@ done
 
 # Search for FileTargets
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
-DDirs='. ~/Downloads ~/android_storage/Download'
+DDirs='~/Downloads ~/android_storage/Download'
 gTargets=""
 # find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime.
 # find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
 for i in $FTargets
 do
-  gTargets="$(eval find -L "$DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
+  if [ "$Inplace" = Y ]
+  then
+    gTargets="$(eval find -L "$DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
+    gTargets="$(eval find -L "." -path "'*SOURCES'" -prune -o -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
+  else
+    gTargets="$(eval find -L ". $DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
+  fi
 done
 for i in $gTargets
 do
@@ -124,12 +131,24 @@ do
   RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
 done
 
+# Ultimately determining archives or spec files to process
+ZTargets=""
 for i in $RTargets
 do
-
-# Specfile="$(tar --wildcards -tf "$filepath" 'rpm/*.spec')"
-# Specfile="$(tar -tf "$filepath" '*.spec' | grep -x 'rpm/.*\.spec')"
-
+  # Specfile="$(tar --wildcards -tf "$filepath" 'rpm/*.spec')"
+  # Specfile="$(tar -tf "$filepath" | grep -x 'rpm/.*\.spec')"
+  if Specfile="$(eval eval tar -tf "$i" 2> /dev/null | grep '\.spec$')"
+  then
+    if [ "$Inplace" = Y ]
+    then ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
+    elif [ "$(printf '%s' "$i" | wc -l)" = 1 ]
+    then ZTargets="$(printf "'%s'\n%s" "$Specfile" "$ZTargets")"
+    else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
+    fi
+  fi
+done
+  
+  
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
 # For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
 # For "maxdepth=2":  ="$(ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
