@@ -41,13 +41,13 @@ then
 fi
 
 ProgramName="$(printf '%s' "$Called" | rev | cut -d '.' -f 2- | rev)"
-Logfile="${ProgramName}.log.txt"
-if ! touch "$Logfile"
+LogFile="${ProgramName}.log.txt"
+if ! touch "$LogFile"
 then
   printf '%s\n' 'Aborting: Failed to create logfile!' >&2
   exit 3
 fi
-printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$Logfile"
+printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$LogFile"
 
 Inplace=N
 case "$1" in
@@ -63,7 +63,7 @@ esac
 
 if [ -n "$2" ]
 then
-  printf '%s\n' "Aborting: No extra arguments expected, but called with \"${*}\"." | tee -a "$Logfile" >&2
+  printf '%s\n' "Aborting: No extra arguments expected, but called with \"${*}\"." | tee -a "$LogFile" >&2
   exit 3
 elif [ -n "$1" ]
 then
@@ -75,7 +75,7 @@ Targets="$(printf %s "$Targets" | tr ',' '\n')"
 
 if printf '%s' "$Targets" | tr ' ' '_' | egrep -q '[[:space:]]|[[:cntrl:]]'
 then
-  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space other than the simple space or control character!" | tee -a "$Logfile" >&2
+  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space other than the simple space or control character!" | tee -a "$LogFile" >&2
   exit 3
 fi
 
@@ -103,7 +103,7 @@ do
 done
 
 # Search for FileTargets
-printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$Logfile"
+printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$LogFile"
 DDirs='~/Downloads ~/android_storage/Download'
 gTargets=""
 # find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime.
@@ -131,9 +131,9 @@ ZTargets=""
 STargets=""
 for i in $RTargets
 do
-  # Specfile="$(tar --wildcards -tf "$filepath" 'rpm/*.spec')"
-  # Specfile="$(tar -tf "$filepath" | grep -x 'rpm/.*\.spec')"
-  if Specfile="$(eval eval tar -tf "$i" 2> /dev/null | grep '\.spec$')"
+  # SpecFile="$(tar --wildcards -tf "$FilePath" 'rpm/*.spec')"
+  # SpecFile="$(tar -tf "$FilePath" | grep -x 'rpm/.*\.spec')"
+  if SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep '\.spec$')"
   then
     if [ "$Inplace" = Y ]
     then ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
@@ -142,10 +142,10 @@ do
          # each line in both variables MUST correspond to each other, hence solely
          # a single spec file pro archive file is allowed.
          # Alternatively the first spec file found can be selected above by, e.g.,
-         # Specfile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
+         # SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
          ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
-         STargets="$(printf "'%s'\n%s" "$Specfile" "$STargets")"
-    else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$Specfile" | tee -a "$Logfile" >&2
+         STargets="$(printf "'%s'\n%s" "$SpecFile" "$STargets")"
+    else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$SpecFile" | tee -a "$LogFile" >&2
     fi
   fi
 done
@@ -158,35 +158,38 @@ then
     j="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     case "$(find -L RPMS -maxdepth 2 -name "${j}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${j}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
-      printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$Logfile"
-      if eval eval rpmbuild -v -ta "$i" >> '"$Logfile"' 2>&1
+      printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
+      if eval eval rpmbuild -v -ta "$i" >> '"$LogFile"' 2>&1
       then printf '%s\n' ': success.'
       else printf '%s\n' ': failed!'
       fi
       ;;
     0_*)
-      printf '%s' "- Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$Logfile"
-      if eval eval rpmbuild -v -tb "$i" >> '"$Logfile"' 2>&1
+      printf '%s' "- Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
+      if eval eval rpmbuild -v -tb "$i" >> '"$LogFile"' 2>&1
       then printf '%s\n' ': success.'
       else printf '%s\n' ': failed!'
       fi
       ;;
     *_0)
-      printf '%s' "- Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$Logfile"
-      if eval eval rpmbuild -v -ts "$i" >> '"$Logfile"' 2>&1
+      printf '%s' "- Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
+      if eval eval rpmbuild -v -ts "$i" >> '"$LogFile"' 2>&1
       then printf '%s\n' ': success.'
       else printf '%s\n' ': failed!'
       fi
       ;;
     *_*)
-     printf '%s\n' "- Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$Logfile"
+     printf '%s\n' "- Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
       ;;
     *)
-      printf '%s\n' "Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$Logfile" 2>&1
+      printf '%s\n' "Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile" 2>&1
       ;;
     esac
   done
 else
+  Moved=""
+  TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
+  printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
   for i in $ZTargets
   do
     
@@ -208,9 +211,9 @@ do
     then
       Archive="$(basename "$j")"
       if [ -e "SOURCES/$Archive" ]
-      then printf '%s\n' "- Warning: Ignoring ${j}, because SOURCES/$Archive already exists." | tee -a "$Logfile"
+      then printf '%s\n' "- Warning: Ignoring ${j}, because SOURCES/$Archive already exists." | tee -a "$LogFile"
       else
-        printf '%s\n' "- $j" | tee -a "$Logfile"
+        printf '%s\n' "- $j" | tee -a "$LogFile"
         mkdir -p SOURCES  # ToDo: Stop creating any directory, instead test for their existance at the start!
         mv "$j" SOURCES/
         Moved="${Moved},$(printf '%s' "$Archive" | sed 's/\.tar.*$//')"
@@ -221,10 +224,10 @@ done
 if [ -n "$Moved" ]
 then
   Moved="$(printf '%s' "$Moved" | sed 's/^,//')"
-  printf '%s\n' "Notice: Using solely \"${Moved}\" as target(s)." | tee -a "$Logfile"
+  printf '%s\n' "Notice: Using solely \"${Moved}\" as target(s)." | tee -a "$LogFile"
   Targets="$Moved"
   Fuzzy=No
-else printf '%s\n' '- Nothing.' | tee -a "$Logfile"
+else printf '%s\n' '- Nothing.' | tee -a "$LogFile"
 fi
 
   # Minimum requirements of RPM for %{name}-%{version} strings, according to
@@ -234,7 +237,7 @@ fi
   # Below my stronger, but usual requirements:
   # [[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*'
 
-printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$Logfile"
+printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
 SpecFiles=""
 TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
 for i in $(printf '%s' "$Targets" | tr ',' '\n')
@@ -260,12 +263,12 @@ do
       f="$(printf '%s' "$b" | grep -x '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
       if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
       then
-        printf '%s' "- $ThisArch" | tee -a "$Logfile"
-        tar -C "$TmpDir" -xof "$ThisArch" 2>&1 | tee -a "$Logfile"
+        printf '%s' "- $ThisArch" | tee -a "$LogFile"
+        tar -C "$TmpDir" -xof "$ThisArch" 2>&1 | tee -a "$LogFile"
         Hit="$(find -P "$TmpDir/$b" -type f -perm /444 -name '*.spec' -print)"
         Hits="$(printf '%s' "$Hit" | wc -l)"
         if [ "$Hits" = 0 ]
-        then printf '%s\n' ': No spec-file found!' | tee -a "$Logfile"
+        then printf '%s\n' ': No spec file found!' | tee -a "$LogFile"
         elif [ "$Hits" = 1 ]
         then
           if x="$(grep -o 'Icon:[^#]*' "$Hit")"
@@ -277,22 +280,22 @@ do
               then
                 if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
                 then sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$Logfile"
+                else printf '%s' ": Notice that icon referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$LogFile"
                 fi
               else
                 IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
                 if [ -n "$IconPath" ]
                 then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$Logfile"
+                else printf '%s' ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$LogFile"
                 fi
               fi
             fi
           fi
           SpecFiles="$(printf '%s\n%s' "$SpecFiles" "$Hit")"
-          printf '\n' | tee -a "$Logfile"
+          printf '\n' | tee -a "$LogFile"
         elif [ "$Hits" -gt 1 ] 2>/dev/null
-        then printf '%s\n' ': More than one spec-file found, ignoring them all!' | tee -a "$Logfile"
-        else printf '%s\n' ': Failed to find a spec-file!' | tee -a "$Logfile"
+        then printf '%s\n' ': More than one spec file found, ignoring them all!' | tee -a "$LogFile"
+        else printf '%s\n' ': Failed to find a spec file!' | tee -a "$LogFile"
         fi
       else break
       fi
@@ -302,20 +305,20 @@ do
       e="$f"
     done
   #elif [ "$Archives" -gt 1 ] 2>/dev/null
-  #then printf '%s\n' "Notice: More than one matching archive for a single target found, ignoring them all: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
-  else printf '%s\n' "Notice: Failed to find an archive via provided target(s), see: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$Logfile"
+  #then printf '%s\n' "Notice: More than one matching archive for a single target found, ignoring them all: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$LogFile"
+  else printf '%s\n' "Notice: Failed to find an archive via provided target(s), see: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$LogFile"
   fi
 done
 if [ -n "$SpecFiles" ]
 then
   SpecFiles="$(printf '%s' "$SpecFiles" | grep -vx '')"
 else
-  printf '%s\n' 'Aborting: Not a single spec-file found!' | tee -a "$Logfile" >&2
+  printf '%s\n' 'Aborting: Not a single spec file found!' | tee -a "$LogFile" >&2
   rm -rf "$TmpDir"
   exit 6
 fi
 
-printf '\n%s\n' 'Building (S)RPM(s):' | tee -a "$Logfile"
+printf '\n%s\n' 'Building (S)RPM(s):' | tee -a "$LogFile"
 QuotedTempDir="$(printf '%s' "${TmpDir}/" | sed 's/\//\\\//g')"
 for i in $SpecFiles
 do
@@ -323,31 +326,31 @@ do
   RPMname="$(dirname "$a" | grep -o '^[^/]*')"
   case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
   0_0)
-    printf '%s' "- Building RPM(s) & SRPM for $RPMname" | tee -a "$Logfile"
-    if rpmbuild -v -ba "$i" >> "$Logfile" 2>&1
+    printf '%s' "- Building RPM(s) & SRPM for $RPMname" | tee -a "$LogFile"
+    if rpmbuild -v -ba "$i" >> "$LogFile" 2>&1
     then printf '%s\n' ': success.'
     else printf '%s\n' ': failed!'
     fi
     ;;
   0_*)
-    printf '%s' "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$Logfile"
-    if rpmbuild -v -bb "$i" >> "$Logfile" 2>&1
+    printf '%s' "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$LogFile"
+    if rpmbuild -v -bb "$i" >> "$LogF" 2>&1
     then printf '%s\n' ': success.'
     else printf '%s\n' ': failed!'
     fi
     ;;
   *_0)
-    printf '%s' "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$Logfile"
-    if rpmbuild -v -bs "$i" >> "$Logfile" 2>&1
+    printf '%s' "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$LogFile"
+    if rpmbuild -v -bs "$i" >> "$LogFile" 2>&1
     then printf '%s\n' ': success.'
     else printf '%s\n' ': failed!'
     fi
     ;;
   *_*)
-    printf '%s\n' "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$Logfile"
+    printf '%s\n' "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$LogFile"
     ;;
   *)
-    printf '%s\n' "Warning: Something went severely wrong while determining what to build (RPM and/or SRPM) for $RPMname, thus skipping it!" | tee -a "$Logfile" 2>&1
+    printf '%s\n' "Warning: Something went severely wrong while determining what to build (RPM and/or SRPM) for $RPMname, thus skipping it!" | tee -a "$LogFile" 2>&1
     ;;
   esac
 done
