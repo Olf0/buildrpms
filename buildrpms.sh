@@ -49,10 +49,10 @@ then
 fi
 printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$LogFile"
 
-Inplace=N
+InPlace=N
 case "$1" in
 -i|--in-place)
-  Inplace=Y
+  InPlace=Y
   shift
   ;;
 -\?|--help)
@@ -99,7 +99,7 @@ do
   if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
+  RTargets="$(printf '%s\n' "$i")$RTargets"
 done
 
 # Search for FileTargets
@@ -110,7 +110,7 @@ gTargets=""
 # find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
 for i in $FTargets
 do
-  if [ "$Inplace" = Y ]
+  if [ "$InPlace" = Y ]
   then
     gTargets="$(eval find -L "$DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
     gTargets="$(eval find -L "." -path "'*SOURCES'" -prune -o -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
@@ -123,7 +123,7 @@ do
   if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n%s' "$i" "$RTargets")"
+  RTargets="$(printf '%s\n' "$i")$RTargets"
 done
 
 # Ultimately determining archives or spec files to process
@@ -131,32 +131,38 @@ ZTargets=""
 STargets=""
 for i in $RTargets
 do
-  # SpecFile="$(tar --wildcards -tf "$FilePath" 'rpm/*.spec')"
-  # SpecFile="$(tar -tf "$FilePath" | grep -x 'rpm/.*\.spec')"
-  if SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep '\.spec$')"
+  if k="$(eval eval tar -tf "$i" 2> /dev/null)"
   then
-    if [ "$Inplace" = Y ]
-    then ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
-    elif [ "$(printf '%s' "$i" | wc -l)" = 1 ]
-    then # STargets and ZTargets lists MUST be synchronised, if Inplace!=Y; i.e.,
-         # each line in both variables MUST correspond to each other, hence solely
-         # a single spec file pro archive file is allowed.
-         # Alternatively the first spec file found can be selected above by, e.g.,
-         # SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
-         ZTargets="$(printf '%s\n%s' "$i" "$ZTargets")"
-         STargets="$(printf "'%s'\n%s" "$SpecFile" "$STargets")"
-    else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$SpecFile" | tee -a "$LogFile" >&2
+    # SpecFile="$(tar --wildcards -tf "$FilePath" 'rpm/*.spec')"
+    # SpecFile="$(tar -tf "$FilePath" | grep -x 'rpm/.*\.spec')"
+    if s="$(printf '%s' "$k" | grep '\.spec$')"
+    then
+      ZTargets="$(printf '%s\n' "$i")$ZTargets"
+      # ZTargets and STargets lists MUST be synchronised, i.e., each line
+      # in both variables MUST correspond to each other, hence solely a
+      # single spec file pro archive file is allowed for InPlace!=Y.
+      # Alternatively the first spec file found could be selected above by, e.g.,
+      # SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
+      if [ "$InPlace" = Y ]
+      then STargets="$(printf '%s\n' "$(printf '%s' "$k" | head -1)")$STargets"  # E.g., "xz-5.0.4/", note the trailing slash
+      elif [ "$(printf '%s' "$s" | wc -l)" = 1 ]
+      then STargets="$(printf '%s\n' "$s")$STargets"
+      else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$s" | tee -a "$LogFile" >&2
+      fi
     fi
   fi
 done
 
 # Building the (S)RPMs
-if [ "$Inplace" = Y ]
+m=0
+if [ "$InPlace" = Y ]
 then
   for i in $ZTargets
   do
-    j="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
-    case "$(find -L RPMS -maxdepth 2 -name "${j}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${j}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
+    m=$((m+1))
+    k="$(printf '%s' "$STargets" | sed -n "${m}P")"
+    k="${k%%/*}"
+    case "$(find -L RPMS -maxdepth 2 -name "${k}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${k}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ta "$i" >> '"$LogFile"' 2>&1
@@ -187,14 +193,16 @@ then
     esac
   done
 else
-  l=0
   Moved=""
   TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
   printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
   for i in $ZTargets
   do
-    l=$((l+1))
+    m=$((m+1))
     
+    
+    s="$(printf '%s' "$STargets" | sed -n "${m}P")"
+
 
 
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
