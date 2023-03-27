@@ -187,14 +187,14 @@ then
     esac
   done
 else
+  l=0
   Moved=""
   TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
   printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
   for i in $ZTargets
   do
+    l=$((l+1))
     
-
-
 
 
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
