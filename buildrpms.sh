@@ -154,16 +154,18 @@ do
 done
 
 # Building the (S)RPMs
-m=0
+k=0
 if [ "$InPlace" = Y ]
 then
   for i in $ZTargets
   do
-    m=$((m+1))
-    k="$(printf '%s' "$STargets" | sed -n "${m}P")"
-    k="${k%%/*}"
-    # Was: k="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
-    case "$(find -L RPMS -maxdepth 2 -name "${k}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${k}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
+    k=$((k+1))
+    o="$(printf '%s' "$STargets" | sed -n "${k}P")"
+    p="${o%%/*}"
+    if [ "$p" = rpm ] || [ "$p" = "$o" ]
+    then p="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
+    fi
+    case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ta "$i" >> '"$LogFile"' 2>&1
@@ -199,10 +201,10 @@ else
   printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
   for i in $ZTargets
   do
-    m=$((m+1))
+    k=$((k+1))
     
     
-    s="$(printf '%s' "$STargets" | sed -n "${m}P")"
+    o="$(printf '%s' "$STargets" | sed -n "${k}P")"
 
 
 
