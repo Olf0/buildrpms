@@ -99,7 +99,7 @@ do
   if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n' "$i")$RTargets"
+  RTargets="${RTargets}$(printf '\n%s' "$i")"
 done
 
 # Search for FileTargets
@@ -123,7 +123,7 @@ do
   if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="$(printf '%s\n' "$i")$RTargets"
+  RTargets="${RTargets}$(printf '\n%s' "$i")"
 done
 
 # Ultimately determining archives or spec files to process
@@ -137,16 +137,19 @@ do
     # SpecFile="$(tar -tf "$FilePath" | grep -x 'rpm/.*\.spec')"
     if s="$(printf '%s' "$k" | grep '\.spec$')"
     then
-      ZTargets="$(printf '%s\n' "$i")$ZTargets"
       # ZTargets and STargets lists MUST be synchronised, i.e., each line
       # in both variables MUST correspond to each other, hence solely a
       # single spec file pro archive file is allowed for InPlace!=Y.
       # Alternatively the first spec file found could be selected above by, e.g.,
       # SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
       if [ "$InPlace" = Y ]
-      then STargets="$(printf '%s\n' "$(printf '%s' "$k" | head -1)")$STargets"  # E.g., "xz-5.0.4/", note the trailing slash
+      then
+        ZTargets="${ZTargets}$(printf '\n%s' "$i")"
+        STargets="${STargets}$(printf '\n%s' "$(printf '%s' "$k" | head -1)")"  # E.g., "xz-5.0.4/", note the trailing slash
       elif [ "$(printf '%s' "$s" | wc -l)" = 1 ]
-      then STargets="$(printf '%s\n' "$s")$STargets"
+      then
+        ZTargets="${ZTargets}$(printf '\n%s' "$i")"
+        STargets="${STargets}$(printf '\n%s' "$s")"
       else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$s" | tee -a "$LogFile" >&2
       fi
     fi
@@ -202,9 +205,10 @@ else
   for i in $ZTargets
   do
     k=$((k+1))
+    printf '%s' "- $i" | tee -a "$LogFile"
+    tar -xof 
     
-    
-    o="$(printf '%s' "$STargets" | sed -n "${k}P")"
+    s="$(printf '%s' "$STargets" | sed -n "${k}P")"
 
 
 
