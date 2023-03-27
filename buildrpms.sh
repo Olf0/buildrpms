@@ -162,6 +162,7 @@ then
     m=$((m+1))
     k="$(printf '%s' "$STargets" | sed -n "${m}P")"
     k="${k%%/*}"
+    # Was: k="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     case "$(find -L RPMS -maxdepth 2 -name "${k}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${k}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
