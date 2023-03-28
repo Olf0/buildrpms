@@ -11,9 +11,13 @@ set -uC  # Add -e later
 # file names processed, except for the simple space character, which must be
 # quoted by a backslash (\) in the argument string, as all other critical
 # characters (|  & ; ( ) < >), too.
-# buildrpms.sh currently recognises the options "-i|--in-place" and
-# "-?|--help".
-# If no argument is given, buildrpms.sh will use an internal list.
+# buildrpms.sh currently recognises the mutually exclusive options "-?|--help"
+# "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
+# spec file of each archive found, processes it and moves each valid archive
+# to the ./SOURCES directory; "-n|--no-move" links each valid archive instead
+# of moving.  "-i|--in-place" omits extracting and processing of spec files
+# and directly uses the original archives.
+# If no archive list is provided, buildrpms.sh will use an internal list.
 
 # Generally the "name-version" scheme and the character sets used
 # for either "name" and "version", shall adhere to the RPM spec-
@@ -55,9 +59,14 @@ fi
 printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$LogFile"
 
 InPlace=N
+NoMove=N
 case "$1" in
 -i|--in-place)
   InPlace=Y
+  shift
+  ;;
+-n|--no-move)
+  NoMove=Y
   shift
   ;;
 -\?|--help)
@@ -176,35 +185,36 @@ then
   for i in $ZTargets
   do
     k=$((k+1))
-    o="$(printf '%s' "$STargets" | sed -n "${k}P")"
+    eval eval printf "\"'%s. %s\n'\"" "'\"\$k\"'" "$i" | tee -a "$LogFile"
+    o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # archive-internal path to first entry
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
     then p="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
-      printf '%s' "- Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
+      printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ta "$i" >> '"$LogFile"' 2>&1
       then printf '%s\n' ': success.'
       else printf '%s\n' ': failed!'
       fi
       ;;
     0_*)
-      printf '%s' "- Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
+      printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
       if eval eval rpmbuild -v -tb "$i" >> '"$LogFile"' 2>&1
       then printf '%s\n' ': success.'
       else printf '%s\n' ': failed!'
       fi
       ;;
     *_0)
-      printf '%s' "- Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
+      printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ts "$i" >> '"$LogFile"' 2>&1
-      then printf '%s\n' ': success.'
-      else printf '%s\n' ': failed!'
+      then printf '%s\n' ' succeded.'
+      else printf '%s\n' ' failed!'
       fi
       ;;
     *_*)
-     printf '%s\n' "- Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
+     printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
       ;;
     *)
       printf '%s\n' "Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile" 2>&1
@@ -219,7 +229,7 @@ else
   for i in $ZTargets
   do
     k=$((k+1))
-    printf '%s' "- $i" | tee -a "$LogFile"
+    eval eval printf "\"'%s. %s\n'\"" "'\"\$k\"'" "$i" | tee -a "$LogFile"
     o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # archive-internal path to a file ending in ".spec"
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
@@ -232,11 +242,11 @@ else
     if tar -xof "../${t}.lnk" "$o"
     then
       cd "$MyPWD"
-      printf '%s' "- $i succeded"
+      printf '%s' " succeded"
       Specs="$Specs$(printf '\n%s' "$t$o")"
     else
       cd "$MyPWD"
-      printf '%s/n' "- $i failed!"
+      printf '%s/n' " failed!"
       continue
     fi
     mkdir -p SOURCES
@@ -274,10 +284,74 @@ else
         fi
       fi
     fi
-    eval eval cp -su "$i" SOURCES/
+    if [ "$NoMove" = Y ]
+    then eval eval cp -sf "$i" SOURCES/ && Moved="$Moved$(eval eval printf "\"'\n%s'\"" "$i")"
+    else eval eval mv -f "$i" SOURCES/ && Moved="$Moved$(eval eval printf "\"'\n%s'\"" "$i")"
+    fi
     printf '%s\n' "."
+    case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
+    0_0)
+      printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
+      if rpmbuild -v -ba "$t$o" >> "$LogFile" 2>&1
+      then printf '%s\n' ': success.'
+      else printf '%s\n' ': failed!'
+      fi
+      ;;
+    0_*)
+      printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
+      if rpmbuild -v -bb "$t$o" >> "$LogFile" 2>&1
+      then printf '%s\n' ': success.'
+      else printf '%s\n' ': failed!'
+      fi
+      ;;
+    *_0)
+      printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
+      if rpmbuild -v -bs "$t$o" >> "$LogFile" 2>&1
+      then printf '%s\n' ' succeded.'
+      else printf '%s\n' ' failed!'
+      fi
+      ;;
+    *_*)
+     printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
+      ;;
+    *)
+      printf '%s\n' "Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile" 2>&1
+      ;;
+    esac
+  
   done
-fi
+  a="$(printf '%s' "$i" | sed "s/^${QuotedTempDir}//")"
+  RPMname="$(dirname "$a" | grep -o '^[^/]*')"
+  case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
+  0_0)
+    printf '%s' "- Building RPM(s) & SRPM for $RPMname" | tee -a "$LogFile"
+    if rpmbuild -v -ba "$i" >> "$LogFile" 2>&1
+    then printf '%s\n' ': success.'
+    else printf '%s\n' ': failed!'
+    fi
+    ;;
+  0_*)
+    printf '%s' "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$LogFile"
+    if rpmbuild -v -bb "$i" >> "$LogFile" 2>&1
+    then printf '%s\n' ': success.'
+    else printf '%s\n' ': failed!'
+    fi
+    ;;
+  *_0)
+    printf '%s' "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$LogFile"
+    if rpmbuild -v -bs "$i" >> "$LogFile" 2>&1
+    then printf '%s\n' ': success.'
+    else printf '%s\n' ': failed!'
+    fi
+    ;;
+  *_*)
+    printf '%s\n' "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$LogFile"
+    ;;
+  *)
+    printf '%s\n' "Warning: Something went severely wrong while determining what to build (RPM and/or SRPM) for $RPMname, thus skipping it!" | tee -a "$LogFile" 2>&1
+    ;;
+  esac
+  
 
 
           if [ -n "$IconFile" ]
