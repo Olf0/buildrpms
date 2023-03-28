@@ -220,7 +220,7 @@ else
   do
     k=$((k+1))
     printf '%s' "- $i" | tee -a "$LogFile"
-    o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # points to a file ending in ".spec" here
+    o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # archive-internal path to a file ending in ".spec"
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
     then p="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
@@ -232,13 +232,14 @@ else
     if tar -xof "../${t}.lnk" "$o"
     then
       cd "$MyPWD"
-      printf '%s/n' "- $i succeded."
+      printf '%s' "- $i succeded"
       Specs="$Specs$(printf '\n%s' "$t$o")"
     else
       cd "$MyPWD"
       printf '%s/n' "- $i failed!"
       continue
     fi
+    mkdir -p SOURCES
     sPre="$(sed -n '1,\_^[[:blank:]]*%prep$_P' "$t$o" | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*$_P' | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*#_P')"
     sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][-+.[:alnum:]_~^]*')"
     sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
@@ -247,9 +248,37 @@ else
     then sNVR="${sNam}*-${sVer}*-${sRel}*"
     else sNVR="$p"
     fi
-    sIco="$(printf %s "$sPre" | grep -i '^[[:blank:]]*##*[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
-    
-    
+    uIco=N
+    if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
+    then : # Icon tag with path detected
+    elif sIco="$(printf %s "$sPre" | grep '^#Icon:' | head -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
+    then  # Icon tag to uncomment with path detected; mind that the first such tag is uncommented!
+      uIco=Y
+    fi
+    if [-n "$sIco" ]
+      if [ -e "SOURCES/$sIco" ]
+      then
+        if [ -r "SOURCES/$sIco" ] && [ ! -d "SOURCES/$sIco" ] && [ -s "SOURCES/$sIco" ]
+        then [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
+        else printf '%s' ", but notice that icon file referenced in spec file $o exists at SOURCES/${sIco}, but is not usable" | tee -a "$LogFile"
+        fi
+      else
+        if tIco="$(tar -tf "$TempDir/${t}.lnk" | fgrep "$sIco")"
+        then
+          cd "$t"
+          tar -xof "../${t}.lnk" $tIco
+          cd "$MyPWD"
+          cp -sf "$(find "$t" -type f \! -executable \! -empty -perm /444 -name "$sIco" -print)" SOURCES/
+          [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
+        else printf '%s' ", notice that icon $sIco is referenced in spec file ${o}, but not found in archive $i" | tee -a "$LogFile"
+        fi
+      fi
+    fi
+    eval eval cp -su "$i" SOURCES/
+    printf '%s\n' "."
+  done
+fi
+
 
           if [ -n "$IconFile" ]
             then
@@ -257,7 +286,7 @@ else
               then
                 if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
                 then sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$LogFile"
+                else printf '%s' ": Notice that icon file referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$LogFile"
                 fi
               else
                 IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
