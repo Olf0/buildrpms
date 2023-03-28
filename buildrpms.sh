@@ -86,7 +86,7 @@ elif [ -n "$1" ]
 then
   Targets="$1"
 else
-  Targets="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade'
+  Targets="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade"
 fi
 Targets="$(printf %s "$Targets" | tr "$Separator" '\n')"
 
@@ -120,7 +120,7 @@ do
 done
 
 # Search for FileTargets
-printf '\n%s\n' "Fetching tar archive(s) from download directories:" | tee -a "$LogFile"
+printf '\n%s\n' "Looking up tar archive(s) from download directories:" | tee -a "$LogFile" >&2
 DDirs='~/Downloads ~/android_storage/Download'
 gTargets=""
 # find -L $DDirs -type f \! -executable \! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime, but mtime can be prepended, see line below.
@@ -133,8 +133,9 @@ for i in $FTargets
 do
   if [ "$InPlace" = Y ]
   then
-    # For double-eval into '%s\n':  eval eval printf "\"'%s\n'\"" …
+    # To double-eval into '%s\n':  eval eval printf "\"'%s\n'\"" …
     # or more quirky "\''%s\n'\'" or even "\'%s'\n'\'"
+    # For variables to double-eval into "$var":  eval eval printf %s "'\"\$var\"'" …
     gTargets="$gTargets$(printf '\n%s' "$(eval find -L "$DDirs" -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
     gTargets="$gTargets$(printf '\n%s' "$(eval find -L "." -path "'*SOURCES'" -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
   else
@@ -147,6 +148,7 @@ do
   then continue
   fi
   RTargets="${RTargets}$(printf '\n%s' "$i")"
+  printf '- %s\n' "$i" | tee -a "$LogFile" >&2
 done
 
 # Ultimately determine archives (ZTargets) and spec files rsp. first archive entries (STargets)
@@ -182,13 +184,13 @@ done
 if [ -z "$ZTargets" ]
 then
   if [ -z "$RTargets" ]
-  then printf '%s\n%s\n' "No archive files found, when processing these target strings:" "$Targets"
-  else printf '%s\n%s\n' "No archive files containing a spec file found, but these archives without one:" "$RTargets"
+  then printf '%s\n%s\n' "No archive files found, when processing these target strings:" "$Targets" | tee -a "$LogFile" >&2
+  else printf '%s\n%s\n' "No archive files containing a spec file found, but these archives without one:" "$RTargets" | tee -a "$LogFile" >&2
   fi
   exit 1
 fi
 
-printf '%s\n' "Processing:"
+printf '%s\n' "Processing:" | tee -a "$LogFile" >&2
 # Building the (S)RPMs
 k=0
 if [ "$InPlace" = Y ]
@@ -196,7 +198,8 @@ then
   for i in $ZTargets
   do
     k=$((k+1))
-    eval eval printf "\"'%s. %s\n'\"" "'\"\$k\"'" "$i" | tee -a "$LogFile"
+    printf '%s. ' "$k" | tee -a "$LogFile" >&2
+    eval eval printf "\"'%s\n'\"" "$i" | tee -a "$LogFile"
     o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # archive-internal path to first entry
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
@@ -204,41 +207,42 @@ then
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
-      printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
+      printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile" >&2
       if eval eval rpmbuild -v -ta "$i" >> "'\"\$LogFile\"'" 2>&1
-      then printf '%s\n' " succeeded." | tee -a "$LogFile"
-      else printf '%s\n' " failed!" | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
+      else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     0_*)
       printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
       if eval eval rpmbuild -v -tb "$i" >> "'\"\$LogFile\"'" 2>&1
-      then printf '%s\n' " succeeded." | tee -a "$LogFile"
-      else printf '%s\n' " failed!" | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
+      else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     *_0)
       printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ts "$i" >> "'\"\$LogFile\"'" 2>&1
-      then printf '%s\n' " succeded." | tee -a "$LogFile"
-      else printf '%s\n' " failed!" | tee -a "$LogFile"
+      then printf '%s\n' " succeded." | tee -a "$LogFile" >&2
+      else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     *_*)
      printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
       ;;
     *)
-      printf '%s\n' "  Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile"
+      printf '%s\n' "  Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile" >&2
       ;;
     esac
   done
 else
   TmpDir="$(mktemp -p -d "${ProgramName}.XXX")"  # -t instead of -p should yield the same
-  printf '\n%s\n' "Extracting spec file from:" | tee -a "$LogFile"
+  printf '\n%s\n' "Extracting spec file from:" | tee -a "$LogFile" >&2
   for i in $ZTargets
   do
     k=$((k+1))
-    eval eval printf "\"'%s. %s'\"" "'\"\$k\"'" "$i" | tee -a "$LogFile"
+    printf '%s. ' "$k" | tee -a "$LogFile" >&2
+    eval eval printf "\"'%s\n'\"" "$i" | tee -a "$LogFile"
     o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # archive-internal path to a file ending in ".spec"
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
@@ -251,10 +255,10 @@ else
     if tar -xof "../${t}.lnk" "$o"
     then
       cd "$MyPWD"
-      printf '%s' " succeded" | tee -a "$LogFile"
+      printf '%s' " succeded" | tee -a "$LogFile" >&2
     else
       cd "$MyPWD"
-      printf '%s/n' " failed!" | tee -a "$LogFile"
+      printf '%s/n' " failed!" | tee -a "$LogFile" >&2
       continue
     fi
     mkdir -p SOURCES
@@ -296,34 +300,34 @@ else
     then eval eval cp -sf "$i" SOURCES/
     else eval eval mv -f "$i" SOURCES/
     fi
-    printf '%s\n' "." | tee -a "$LogFile"
+    printf '%s\n' "." | tee -a "$LogFile" >&2
     case "$(find -L RPMS -maxdepth 2 -name "${sNVR}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
       if rpmbuild -v -ba "$t$o" >> "$LogFile" 2>&1
-      then printf '%s\n' " succeeded." | tee -a "$LogFile"
-      else printf '%s\n' " failed!" | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
+      else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     0_*)
-      printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
+      printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile" >&2
       if rpmbuild -v -bb "$t$o" >> "$LogFile" 2>&1
-      then printf '%s\n' " succeeded." | tee -a "$LogFile"
-      else printf '%s\n' " failed!" | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
+      else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     *_0)
-      printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
+      printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile" >&2
       if rpmbuild -v -bs "$t$o" >> "$LogFile" 2>&1
-      then printf '%s\n' " succeeded." | tee -a "$LogFile"
-      else printf '%s\n' " failed!" | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
+      else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     *_*)
-     printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
+     printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile" >&2
       ;;
     *)
-      printf '%s\n' "  Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile"
+      printf '%s\n' "  Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile" >&2
       ;;
     esac
   done
