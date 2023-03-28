@@ -272,7 +272,7 @@ else
     fi
     uIco=N
     if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
-    then : # Icon tag with path detected
+    then :  # Icon tag with path detected
     elif sIco="$(printf %s "$sPre" | grep '^#Icon:' | head -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
     then  # Icon tag to uncomment with path detected; mind that the first such tag is uncommented!
       uIco=Y
@@ -282,17 +282,17 @@ else
       then
         if [ -r "SOURCES/$sIco" ] && [ ! -d "SOURCES/$sIco" ] && [ -s "SOURCES/$sIco" ]
         then [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
-        else printf '%s' ", though notice that icon file referenced in spec file $o exists at SOURCES/${sIco}, but is not usable" | tee -a "$LogFile"
+        else printf '%s' ", though notice that icon file referenced in spec file $o exists at SOURCES/${sIco}, but is not usable" | tee -a "$LogFile" >&2
         fi
       else
         if tIco="$(tar -tf "$TempDir/${t}.lnk" | fgrep "$sIco")"
         then
           cd "$t"
-          tar -xof "../${t}.lnk" $tIco
+          tar -xof "../${t}.lnk" "$tIco"
           cd "$MyPWD"
           cp -sf "$(find "$t" -type f \! -executable \! -empty -perm /444 -name "$sIco" -print)" SOURCES/
           [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
-        else printf '%s' ", though notice that icon file $sIco is referenced in spec file ${o}, but not found in archive $i" | tee -a "$LogFile"
+        else printf '%s' ", though notice that icon file $sIco is referenced in spec file ${o}, but not found in archive $i" | tee -a "$LogFile" >&2
         fi
       fi
     fi
