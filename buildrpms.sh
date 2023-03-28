@@ -205,21 +205,21 @@ then
     case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
-      if eval eval rpmbuild -v -ta "$i" >> '"$LogFile"' 2>&1
+      if eval eval rpmbuild -v -ta "$i" >> "'\"\$LogFile\"'" 2>&1
       then printf '%s\n' ' succeeded.'
       else printf '%s\n' ' failed!'
       fi
       ;;
     0_*)
       printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
-      if eval eval rpmbuild -v -tb "$i" >> '"$LogFile"' 2>&1
+      if eval eval rpmbuild -v -tb "$i" >> "'\"\$LogFile\"'" 2>&1
       then printf '%s\n' ' succeeded.' | tee -a "$LogFile"
       else printf '%s\n' ' failed!' | tee -a "$LogFile"
       fi
       ;;
     *_0)
       printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
-      if eval eval rpmbuild -v -ts "$i" >> '"$LogFile"' 2>&1
+      if eval eval rpmbuild -v -ts "$i" >> "'\"\$LogFile\"'" 2>&1
       then printf '%s\n' ' succeded.' | tee -a "$LogFile"
       else printf '%s\n' ' failed!' | tee -a "$LogFile"
       fi
