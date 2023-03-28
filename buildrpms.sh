@@ -56,7 +56,7 @@ ProgramName="$(printf '%s' "$Called" | rev | cut -d '.' -f 2- | rev)"
 LogFile="${ProgramName}.log.txt"
 if ! touch "$LogFile"
 then
-  printf '%s\n' 'Aborting: Failed to create logfile!' >&2
+  printf '%s\n' "Aborting: Failed to create logfile!" >&2
   exit 5
 fi
 printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$LogFile"
@@ -120,7 +120,7 @@ do
 done
 
 # Search for FileTargets
-printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$LogFile"
+printf '\n%s\n' "Fetching tar archive(s) from download directories:" | tee -a "$LogFile"
 DDirs='~/Downloads ~/android_storage/Download'
 gTargets=""
 # find -L $DDirs -type f \! -executable \! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime, but mtime can be prepended, see line below.
@@ -182,13 +182,13 @@ done
 if [ -z "$ZTargets" ]
 then
   if [ -z "$RTargets" ]
-  then printf '%s\n%s\n' 'No archive files found, when processing these target strings:' "$Targets"
-  else printf '%s\n%s\n' 'No archive files containing a spec file found, but these archives without one:' "$RTargets"
+  then printf '%s\n%s\n' "No archive files found, when processing these target strings:" "$Targets"
+  else printf '%s\n%s\n' "No archive files containing a spec file found, but these archives without one:" "$RTargets"
   fi
   exit 1
 fi
 
-printf '%s\n' "Processing:'
+printf '%s\n' "Processing:"
 # Building the (S)RPMs
 k=0
 if [ "$InPlace" = Y ]
@@ -206,22 +206,22 @@ then
     0_0)
       printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ta "$i" >> "'\"\$LogFile\"'" 2>&1
-      then printf '%s\n' ' succeeded.'
-      else printf '%s\n' ' failed!'
+      then printf '%s\n' " succeeded." | tee -a "$LogFile"
+      else printf '%s\n' " failed!" | tee -a "$LogFile"
       fi
       ;;
     0_*)
       printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
       if eval eval rpmbuild -v -tb "$i" >> "'\"\$LogFile\"'" 2>&1
-      then printf '%s\n' ' succeeded.' | tee -a "$LogFile"
-      else printf '%s\n' ' failed!' | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile"
+      else printf '%s\n' " failed!" | tee -a "$LogFile"
       fi
       ;;
     *_0)
       printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
       if eval eval rpmbuild -v -ts "$i" >> "'\"\$LogFile\"'" 2>&1
-      then printf '%s\n' ' succeded.' | tee -a "$LogFile"
-      else printf '%s\n' ' failed!' | tee -a "$LogFile"
+      then printf '%s\n' " succeded." | tee -a "$LogFile"
+      else printf '%s\n' " failed!" | tee -a "$LogFile"
       fi
       ;;
     *_*)
@@ -234,7 +234,7 @@ then
   done
 else
   TmpDir="$(mktemp -p -d "${ProgramName}.XXX")"  # -t instead of -p should yield the same
-  printf '\n%s\n' 'Extracting spec file from:' | tee -a "$LogFile"
+  printf '\n%s\n' "Extracting spec file from:" | tee -a "$LogFile"
   for i in $ZTargets
   do
     k=$((k+1))
@@ -301,22 +301,22 @@ else
     0_0)
       printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
       if rpmbuild -v -ba "$t$o" >> "$LogFile" 2>&1
-      then printf '%s\n' ' succeeded.' | tee -a "$LogFile"
-      else printf '%s\n' ' failed!' | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile"
+      else printf '%s\n' " failed!" | tee -a "$LogFile"
       fi
       ;;
     0_*)
       printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
       if rpmbuild -v -bb "$t$o" >> "$LogFile" 2>&1
-      then printf '%s\n' ' succeeded.' | tee -a "$LogFile"
-      else printf '%s\n' ' failed!' | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile"
+      else printf '%s\n' " failed!" | tee -a "$LogFile"
       fi
       ;;
     *_0)
       printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
       if rpmbuild -v -bs "$t$o" >> "$LogFile" 2>&1
-      then printf '%s\n' ' succeeded.' | tee -a "$LogFile"
-      else printf '%s\n' ' failed!' | tee -a "$LogFile"
+      then printf '%s\n' " succeeded." | tee -a "$LogFile"
+      else printf '%s\n' " failed!" | tee -a "$LogFile"
       fi
       ;;
     *_*)
