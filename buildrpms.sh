@@ -4,13 +4,15 @@ set -uC  # Add -e later
 #        1         2         3         4         5         6         7         8
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-# buildrpms.sh expects a comma separated list of tar archive names or paths as
-# each item.  The archive names may either be truncated (i.e., provide only the 
-# beginning of their names) or contain shell type wildcards (? * []).  No
+# buildrpms.sh expects a colon (:) separated list of tar archive names or paths
+# as each item.  The archive names may either be truncated (i.e., provide only
+# the beginning of their names) or contain shell type wildcards (? * []).  No
 # white-space or control characters are allowed in the argument string or real
-# file names processed, except for the simple space character (which must be
-# quoted) in the argument string.
-# buildrpms.sh currently only recogises a single option, "--fuzzy".
+# file names processed, except for the simple space character, which must be
+# quoted by a backslash (\) in the argument string, as all other critical
+# characters (|  & ; ( ) < >), too.
+# buildrpms.sh currently recognises the options "-i|--in-place" and
+# "-?|--help".
 # If no argument is given, buildrpms.sh will use an internal list.
 
 # Generally the "name-version" scheme and the character sets used
@@ -32,6 +34,9 @@ export LANG=C  # Engineering English only
 export LC_CTYPE=POSIX
 export LC_COLLATE=POSIX
 # export IFS="$(printf '\n')"
+
+Separator=":"
+MyPWD="$PWD"
 
 Called="$(basename "$0")"
 if printf '%s' " $(id -un) $(id -Gn) " | fgrep -q ' root '
@@ -69,9 +74,9 @@ elif [ -n "$1" ]
 then
   Targets="$1"
 else
-  Targets='crypto-sdcard,mount-sdcard,sfos-upgrade'
+  Targets="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade'
 fi
-Targets="$(printf %s "$Targets" | tr ',' '\n')"
+Targets="$(printf %s "$Targets" | tr "$Separator" '\n')"
 
 if printf '%s' "$Targets" | tr ' ' '_' | egrep -q '[[:space:]]|[[:cntrl:]]'
 then
@@ -99,23 +104,25 @@ do
   if ! eval eval file -L --mime-type "$i" | grep '^application/'
   then continue
   fi
-  RTargets="${RTargets}$(printf '\n%s' "$i")"
+  RTargets="$RTargets$(printf '\n%s' "$i")"
 done
 
 # Search for FileTargets
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$LogFile"
 DDirs='~/Downloads ~/android_storage/Download'
 gTargets=""
-# find -L $DDirs -type f ! -executable ! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime.
-# find -L . -path SOURCES -prune -o -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
+# find -L $DDirs -type f \! -executable \! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime.
+# find -L . -path SOURCES -prune -o -type f \! -executable \! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
 for i in $FTargets
 do
   if [ "$InPlace" = Y ]
   then
-    gTargets="$(eval find -L "$DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
-    gTargets="$(eval find -L "." -path "'*SOURCES'" -prune -o -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
+     # For double-eval into '%s\n':  eval eval printf "\"'%s\n'\"" …
+     # or more quirky "\''%s\n'\'" or even "\'%s'\n'\'"
+     gTargets="$gTargets$(printf '\n%s' "$(eval find -L "$DDirs" -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
+    gTargets="$gTargets$(printf '\n%s' "$(eval find -L "." -path "'*SOURCES'" -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
   else
-    gTargets="$(eval find -L ". $DDirs" -type f ! -executable ! -empty -perm /444 -name "$i" -printf "\'%s\''\n'" 2> /dev/null)$gTargets"
+    gTargets="$gTargets$(printf '\n%s' "$(eval find -L ". $DDirs" -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
   fi
 done
 for i in $gTargets
@@ -144,17 +151,23 @@ do
       # SpecFile="$(eval eval tar -tf "$i" 2> /dev/null | grep -m 1 'rpm/.*\.spec$')"
       if [ "$InPlace" = Y ]
       then
-        ZTargets="${ZTargets}$(printf '\n%s' "$i")"
-        STargets="${STargets}$(printf '\n%s' "$(printf '%s' "$k" | head -1)")"  # E.g., "xz-5.0.4/", note the trailing slash
+        ZTargets="$ZTargets$(printf '\n%s' "$i")"
+        STargets="$STargets$(printf '\n%s' "$(printf '%s' "$k" | head -1)")"  # E.g., "xz-5.0.4/", note the trailing slash
       elif [ "$(printf '%s' "$s" | wc -l)" = 1 ]
       then
-        ZTargets="${ZTargets}$(printf '\n%s' "$i")"
-        STargets="${STargets}$(printf '\n%s' "$s")"
+        ZTargets="$ZTargets$(printf '\n%s' "$i")"
+        STargets="$STargets$(printf '\n%s' "$s")"
       else printf '%s\n%s\n' "Warning: Skipping archive \"${i}\", because more than a single spec file found in it:" "$s" | tee -a "$LogFile" >&2
       fi
     fi
   fi
 done
+
+if [ -z "$ZTargets" ]
+then
+  printf '%s\n%s\n' 'No archive files containing a spec file found after processing the target strings:' "$Targets"
+  exit 1
+fi
 
 # Building the (S)RPMs
 k=0
@@ -200,18 +213,60 @@ then
   done
 else
   Moved=""
-  TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
-  printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
+  Specs=""
+  TmpDir="$(mktemp -p -d "${ProgramName}.XXX")"  # -t instead of -p should yield the same
+  printf '\n%s\n' 'Extracting spec file from:' | tee -a "$LogFile"
   for i in $ZTargets
   do
     k=$((k+1))
     printf '%s' "- $i" | tee -a "$LogFile"
-    tar -xof 
+    o="$(printf '%s' "$STargets" | sed -n "${k}P")"  # points to a file ending in ".spec" here
+    p="${o%%/*}"
+    if [ "$p" = rpm ] || [ "$p" = "$o" ]
+    then p="$(eval basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
+    fi
+    t="$TmpDir/$p"
+    mkdir "$t"
+    eval eval ln -s "$i" "'\"\${t}.lnk\"'"  # Results in `ln -s <expanded path> "${t}.lnk"`
+    cd "$t"
+    if tar -xof "../${t}.lnk" "$o"
+    then
+      cd "$MyPWD"
+      printf '%s/n' "- $i succeded."
+      Specs="$Specs$(printf '\n%s' "$t$o")"
+    else
+      cd "$MyPWD"
+      printf '%s/n' "- $i failed!"
+      continue
+    fi
+    sPre="$(sed -n '1,\_^[[:blank:]]*%prep$_P' "$t$o" | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*$_P' | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*#_P')"
+    sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][-+.[:alnum:]_~^]*' | head -1)"
+    sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][+.[:alnum:]_~^]*' | head -1)"
+    sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][+.[:alnum:]_~^]*' | head -1)"
+    if [ -n "$sNam" ] && [ -n "$sVer" ]
+    then sNVR="${sNam}*-${sVer}*-${sRel}*"
+    else sNVR="$p"
+    fi
+    sIco="$(printf %s "$sPre" | grep -i '^[[:blank:]]*##*[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][+.[:alnum:]_~^]*' | head -1)"
     
-    s="$(printf '%s' "$STargets" | sed -n "${k}P")"
+    
 
-
-
+          if [ -n "$IconFile" ]
+            then
+              if [ -e "SOURCES/$IconFile" ]
+              then
+                if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
+                then sed -i 's/##* *Icon:/Icon:/' "$Hit"
+                else printf '%s' ": Notice that icon referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$LogFile"
+                fi
+              else
+                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
+                if [ -n "$IconPath" ]
+                then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
+                else printf '%s' ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$LogFile"
+                fi
+              fi
+            fi
 # #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
 # For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
 # For "maxdepth=2":  ="$(ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
@@ -247,7 +302,7 @@ fi
 
   # Minimum requirements of RPM for %{name}-%{version} strings, according to
   # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
-  # [[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*
+  # [[:graph:]][[:graph:]]*-[[:alnum:]][[:alnum:].+_~^]*
   # This also covers %{name}-%{version}-%{release} strings.
   # Below my stronger, but usual requirements:
   # [[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*'
