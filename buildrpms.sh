@@ -278,6 +278,7 @@ else
       uIco=Y
     fi
     if [-n "$sIco" ]
+    then
       if [ -e "SOURCES/$sIco" ]
       then
         if [ -r "SOURCES/$sIco" ] && [ ! -d "SOURCES/$sIco" ] && [ -s "SOURCES/$sIco" ]
