@@ -4,26 +4,31 @@ set -uC  # Add -e later
 #        1         2         3         4         5         6         7         8
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-# buildrpms.sh expects a colon (:) separated list of tar archive names or paths
-# as each item.  The archive names may either be truncated (i.e., provide only
-# the beginning of their names) or contain shell type wildcards (? * []).  No
-# white-space or control characters are allowed in the argument string or real
-# file names processed, except for the simple space character, which must be
-# quoted by a backslash (\) in the argument string, as all other critical
-# characters (|  & ; ( ) < >), too.
-# buildrpms.sh currently recognises the mutually exclusive options "-?|--help"
+# buildrpms.sh expects a colon (:) separated list of tar archive paths
+# (including simple names) as each item.  The archive paths may either be
+# truncated (i.e., provide only a path including the beginning of a name) or
+# contain shell type wildcards (? * []).  No white-space or control characters
+# are allowed in the argument string or real file paths processed, except for
+# the simple space character, which must be quoted by a backslash (\) in the
+# argument string, as all other critical characters (|  & ; ( ) < >), too.
+# buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
 # spec file of each archive found, processes it and moves each valid archive
 # to the ./SOURCES directory; "-n|--no-move" links each valid archive instead
 # of moving.  "-i|--in-place" omits extracting and processing of spec files
-# and directly uses the original archives.
+# and directly uses the archives at their original location.
 # If no archive list is provided, buildrpms.sh will use an internal list.
 
-# Generally the "name-version" scheme and the character sets used
-# for either "name" and "version", shall adhere to the RPM spec-
-# file specification:
+# Minimum requirements of RPM for %{name}-%{version} strings, according to
 # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
-
+# [[:graph:]][[:graph:]]*-[[:alnum:]][[:alnum:].+_~^]*"
+# This also covers %{name}-%{version}-%{release} strings, because
+# "[[:graph:]]*" includes "-[[:alnum:]][[:alnum:].+_~^]*" and the
+# requirements for %{release} are the same as for %{version}.
+# My stronger, but usual requirements for %{name}-%{version} strings are
+# "[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*" plus for
+# -%{release} strings "-[[:alnum:]][[:alnum:].+_~^]*".
+  
 # Exit codes:
 #   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbuild run(s)
 #   1  A check failed
@@ -34,10 +39,8 @@ set -uC  # Add -e later
 #   6  Error while executing one of the preparatory steps
 #   7  Error internal to this script
 
-export LANG=C  # Engineering English only
-export LC_CTYPE=POSIX
-export LC_COLLATE=POSIX
-# export IFS="$(printf '\n')"
+export LC_ALL=POSIX  # For details see https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_02
+export POSIXLY_CORRECT=1  # Also necessary for a sane `df` output, see https://github.com/Olf0/sfos-upgrade/issues/73 
 
 Separator=":"
 MyPWD="$PWD"
@@ -120,8 +123,12 @@ done
 printf '\n%s\n' 'Fetching tar archive(s) from download directories:' | tee -a "$LogFile"
 DDirs='~/Downloads ~/android_storage/Download'
 gTargets=""
-# find -L $DDirs -type f \! -executable \! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime.
+# find -L $DDirs -type f \! -executable \! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime, but mtime can be prepended, see line below.
 # find -L . -path SOURCES -prune -o -type f \! -executable \! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
+# For "maxdepth=1":  ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
+# For "maxdepth=2":  ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$' | tr -d '@'  # needs complex post-processing, directories appended with ":" must be prepended recursively
+# For no "maxdepth": ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # "| tr -d '@'" discards appended link markers 
+
 for i in $FTargets
 do
   if [ "$InPlace" = Y ]
@@ -321,217 +328,5 @@ else
     esac
   done
 fi
-  
-  
-  done
-  a="$(printf '%s' "$i" | sed "s/^${QuotedTempDir}//")"
-  RPMname="$(dirname "$a" | grep -o '^[^/]*')"
-  case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
-  0_0)
-    printf '%s' "- Building RPM(s) & SRPM for $RPMname" | tee -a "$LogFile"
-    if rpmbuild -v -ba "$i" >> "$LogFile" 2>&1
-    then printf '%s\n' ': success.'
-    else printf '%s\n' ': failed!'
-    fi
-    ;;
-  0_*)
-    printf '%s' "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$LogFile"
-    if rpmbuild -v -bb "$i" >> "$LogFile" 2>&1
-    then printf '%s\n' ': success.'
-    else printf '%s\n' ': failed!'
-    fi
-    ;;
-  *_0)
-    printf '%s' "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$LogFile"
-    if rpmbuild -v -bs "$i" >> "$LogFile" 2>&1
-    then printf '%s\n' ': success.'
-    else printf '%s\n' ': failed!'
-    fi
-    ;;
-  *_*)
-    printf '%s\n' "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$LogFile"
-    ;;
-  *)
-    printf '%s\n' "Warning: Something went severely wrong while determining what to build (RPM and/or SRPM) for $RPMname, thus skipping it!" | tee -a "$LogFile" 2>&1
-    ;;
-  esac
-fi
-
-
-          if [ -n "$IconFile" ]
-            then
-              if [ -e "SOURCES/$IconFile" ]
-              then
-                if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
-                then sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon file referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$LogFile"
-                fi
-              else
-                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
-                if [ -n "$IconPath" ]
-                then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$LogFile"
-                fi
-              fi
-            fi
-# #  ="$(find -L SOURCES -maxdepth 1 -type f ! -executable ! -empty -perm /444 -name "${i}*.tar*" -print)"  # Output not directly sortable by mtime.
-# For "maxdepth=1":  ="$(ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
-# For "maxdepth=2":  ="$(ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
-# For no "maxdepth": ="$(ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
-
-Moved=""
-for i in $(printf '%s' "$Targets" | sed -e "s/^/'/" -e "s/$/'/")
-do
-  for j in ~/android_storage/Download/${i}*.tar* ~/Downloads/${i}*.tar*  # Hardcoded!
-  do
-    if [ -s "$j" ] 2>/dev/null && [ -r "$j" ] 2>/dev/null && [ ! -d "$j" ] 2>/dev/null
-    then
-      Archive="$(basename "$j")"
-      if [ -e "SOURCES/$Archive" ]
-      then printf '%s\n' "- Warning: Ignoring ${j}, because SOURCES/$Archive already exists." | tee -a "$LogFile"
-      else
-        printf '%s\n' "- $j" | tee -a "$LogFile"
-        mkdir -p SOURCES  # ToDo: Stop creating any directory, instead test for their existence at the start!
-        mv "$j" SOURCES/
-        Moved="${Moved},$(printf '%s' "$Archive" | sed 's/\.tar.*$//')"
-      fi
-    fi
-  done
-done
-if [ -n "$Moved" ]
-then
-  Moved="$(printf '%s' "$Moved" | sed 's/^,//')"
-  printf '%s\n' "Notice: Using solely \"${Moved}\" as target(s)." | tee -a "$LogFile"
-  Targets="$Moved"
-  Fuzzy=No
-else printf '%s\n' '- Nothing.' | tee -a "$LogFile"
-fi
-
-  # Minimum requirements of RPM for %{name}-%{version} strings, according to
-  # https://rpm-software-management.github.io/rpm/manual/spec.html#preamble-tags
-  # [[:graph:]][[:graph:]]*-[[:alnum:]][[:alnum:].+_~^]*
-  # This also covers %{name}-%{version}-%{release} strings.
-  # Below my stronger, but usual requirements:
-  # [[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*'
-
-printf '\n%s\n' 'Extracting spec file(s) from:' | tee -a "$LogFile"
-SpecFiles=""
-TmpDir="$(mktemp --tmpdir -d "${ProgramName}.XXX")"
-for i in $(printf '%s' "$Targets" | tr ',' '\n')
-do
-  # Archive="$(find -L SOURCES -maxdepth 1 -type f -perm /444 -name "${i}*.tar*" -print)"  # Output not sortable for mtime (or ctime)!?!
-  Archive="$(ls -L1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here; -F is an unneeded superset of -p.
-  Archives="$(printf '%s' "$Archive" | wc -l)"
-  if [ "$Archives" = 0 ]
-  then continue
-  elif [ "$Archives" -gt 0 ] 2>/dev/null
-  then
-  #if [ "$Fuzzy" != "No" ]
-  #then Archive="$(printf '%s' "$Archive" | head -1)"
-  #fi
-    PrevArch="$(printf '%s' "$Archive" | head -1)"
-    a="$(basename "$PrevArch" | sed 's/\.tar.*$//')"
-    c="$(printf '%s' "$a" | grep -x '[[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
-    e="$(printf '%s' "$a" | grep -x '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
-    for ThisArch in $Archive
-    do
-      b="$(basename "$ThisArch" | sed 's/\.tar.*$//')"
-      d="$(printf '%s' "$b" | grep -x '[[:graph:]][[:graph:]]*-[[:alnum:].+_~^][[:alnum:].+_~^]*')"  # Fulfils the minimum naming requirements, see line 58.
-      f="$(printf '%s' "$b" | grep -x '[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*')"  # Fulfils the naming requirements for my "fuzzy evaluation", see line 60.
-      if { [ -n "$f" ] && [ "$f" = "$e" ]; } || { [ -n "$d" ] && [ "$Fuzzy" = "No" ] && [ "$d" = "$c" ]; } || { [ -n "$ThisArch" ] && [ "$ThisArch" = "$PrevArch" ]; }  # Last statement is for detecting the first loop run
-      then
-        printf '%s' "- $ThisArch" | tee -a "$LogFile"
-        tar -C "$TmpDir" -xof "$ThisArch" 2>&1 | tee -a "$LogFile"
-        Hit="$(find -P "$TmpDir/$b" -type f -perm /444 -name '*.spec' -print)"
-        Hits="$(printf '%s' "$Hit" | wc -l)"
-        if [ "$Hits" = 0 ]
-        then printf '%s\n' ': No spec file found!' | tee -a "$LogFile"
-        elif [ "$Hits" = 1 ]
-        then
-          if x="$(grep -o 'Icon:[^#]*' "$Hit")"
-          then
-            IconFile="$(printf '%s' "$x" | head -1 | sed -e 's/Icon://' -e 's/^[[:blank:]]*//')"
-            if [ -n "$IconFile" ]
-            then
-              if [ -e "SOURCES/$IconFile" ]
-              then
-                if [ -r "SOURCES/$IconFile" ] && [ ! -d "SOURCES/$IconFile" ] && [ -s "SOURCES/$IconFile" ]
-                then sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon referenced in the spec file exists at SOURCES/$IconFile, but is not usable." | tee -a "$LogFile"
-                fi
-              else
-                IconPath="$(find -P "$TmpDir/$b" -type f -perm /444 -name "$IconFile" -print | head -1)"
-                if [ -n "$IconPath" ]
-                then ln -s "$IconPath" "SOURCES/$IconFile" && sed -i 's/##* *Icon:/Icon:/' "$Hit"
-                else printf '%s' ": Notice that icon $IconFile is referenced in $Hit, but not found in $ThisArch." | tee -a "$LogFile"
-                fi
-              fi
-            fi
-          fi
-          SpecFiles="$(printf '%s\n%s' "$SpecFiles" "$Hit")"
-          printf '\n' | tee -a "$LogFile"
-        elif [ "$Hits" -gt 1 ] 2>/dev/null
-        then printf '%s\n' ': More than one spec file found, ignoring them all!' | tee -a "$LogFile"
-        else printf '%s\n' ': Failed to find a spec file!' | tee -a "$LogFile"
-        fi
-      else break
-      fi
-      PrevArch="$ThisArch"
-      a="$b"
-      c="$d"
-      e="$f"
-    done
-  #elif [ "$Archives" -gt 1 ] 2>/dev/null
-  #then printf '%s\n' "Notice: More than one matching archive for a single target found, ignoring them all: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$LogFile"
-  else printf '%s\n' "Notice: Failed to find an archive via provided target(s), see: $(printf '%s' "$Archive" | tr '\n' '\t')" | tee -a "$LogFile"
-  fi
-done
-if [ -n "$SpecFiles" ]
-then
-  SpecFiles="$(printf '%s' "$SpecFiles" | grep -vx '')"
-else
-  printf '%s\n' 'Aborting: Not a single spec file found!' | tee -a "$LogFile" >&2
-  rm -rf "$TmpDir"
-  exit 6
-fi
-
-printf '\n%s\n' 'Building (S)RPM(s):' | tee -a "$LogFile"
-QuotedTempDir="$(printf '%s' "${TmpDir}/" | sed 's/\//\\\//g')"
-for i in $SpecFiles
-do
-  a="$(printf '%s' "$i" | sed "s/^${QuotedTempDir}//")"
-  RPMname="$(dirname "$a" | grep -o '^[^/]*')"
-  case "$(find RPMS -maxdepth 2 -name "${RPMname}*.rpm" -print | wc -l)_$(find SRPMS -maxdepth 1 -name "${RPMname}*.s*rpm" -print | wc -l)" in
-  0_0)
-    printf '%s' "- Building RPM(s) & SRPM for $RPMname" | tee -a "$LogFile"
-    if rpmbuild -v -ba "$i" >> "$LogFile" 2>&1
-    then printf '%s\n' ': success.'
-    else printf '%s\n' ': failed!'
-    fi
-    ;;
-  0_*)
-    printf '%s' "- Building RPM(s) for $RPMname (because its SRPM already exists)" | tee -a "$LogFile"
-    if rpmbuild -v -bb "$i" >> "$LogF" 2>&1
-    then printf '%s\n' ': success.'
-    else printf '%s\n' ': failed!'
-    fi
-    ;;
-  *_0)
-    printf '%s' "- Building SRPM for $RPMname (because an RPM for it already exists)" | tee -a "$LogFile"
-    if rpmbuild -v -bs "$i" >> "$LogFile" 2>&1
-    then printf '%s\n' ': success.'
-    else printf '%s\n' ': failed!'
-    fi
-    ;;
-  *_*)
-    printf '%s\n' "- Skip building for $RPMname, because its SRPM & an RPM both already exist." | tee -a "$LogFile"
-    ;;
-  *)
-    printf '%s\n' "Warning: Something went severely wrong while determining what to build (RPM and/or SRPM) for $RPMname, thus skipping it!" | tee -a "$LogFile" 2>&1
-    ;;
-  esac
-done
-
 # rm -rf "$TmpDir"
 exit 0
-
