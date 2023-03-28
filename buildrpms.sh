@@ -240,14 +240,14 @@ else
       continue
     fi
     sPre="$(sed -n '1,\_^[[:blank:]]*%prep$_P' "$t$o" | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*$_P' | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*#_P')"
-    sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][-+.[:alnum:]_~^]*' | head -1)"
-    sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][+.[:alnum:]_~^]*' | head -1)"
-    sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][+.[:alnum:]_~^]*' | head -1)"
+    sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][-+.[:alnum:]_~^]*')"
+    sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
+    sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
     if [ -n "$sNam" ] && [ -n "$sVer" ]
     then sNVR="${sNam}*-${sVer}*-${sRel}*"
     else sNVR="$p"
     fi
-    sIco="$(printf %s "$sPre" | grep -i '^[[:blank:]]*##*[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | grep -o '[[:alnum:]][+.[:alnum:]_~^]*' | head -1)"
+    sIco="$(printf %s "$sPre" | grep -i '^[[:blank:]]*##*[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
     
     
 
