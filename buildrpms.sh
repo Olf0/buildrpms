@@ -5,12 +5,14 @@ set -uC  # Add -e later
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 
 # buildrpms.sh expects a colon (:) separated list of tar archive paths
-# (including simple names) as each item.  The archive paths may either be
-# truncated (i.e., provide only a path including the beginning of a name) or
-# contain shell type wildcards (? * []).  No white-space or control characters
-# are allowed in the argument string or real file paths processed, except for
-# the simple space character, which must be quoted by a backslash (\) in the
-# argument string, as all other critical characters (|  & ; ( ) < >), too.
+# (including simple names) as each item in then only non-option argument or
+# each item as a single parameter or a mix of both.  The archive paths may
+# either be truncated (i.e., provide only a path including the beginning of a
+# name) or contain shell type wildcards (? * []).  No white-space or control
+# characters are allowed in the argument string or real file paths processed,
+# except for the simple space character, which must be quoted by a backslash
+# in the argument string, as all other critical characters (|  & ; ( ) < >),
+# plus the dollar sign (and wildcard characters to be retained as is), too.
 # buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
 # spec file of each archive found, processes it and moves each valid archive
@@ -59,36 +61,41 @@ then
   printf '%s\n' "Aborting: Failed to create logfile!" >&2
   exit 5
 fi
-printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$LogFile"
+printf '%s\n' "Starting $Called at $(date -Iseconds)" | tee "$LogFile" >&2
 
 InPlace=N
 NoMove=N
-case "$1" in
--i|--in-place)
-  InPlace=Y
-  shift
-  ;;
--n|--no-move)
-  NoMove=Y
-  shift
-  ;;
--\?|--help)
-  printf '%s\n' "Help text for $called not yet written." >&2
-  exit 2
-  ;;
-esac
-
-if [ -n "$2" ]
+if [ $# -ge 1 ]
 then
-  printf '%s\n' "Aborting: No extra arguments expected, but called with \"${*}\"." | tee -a "$LogFile" >&2
-  exit 3
-elif [ -n "$1" ]
-then
-  Targets="$1"
-else
-  Targets="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade"
+  case "$1" in
+  -i|--in-place)
+    InPlace=Y
+    shift
+    ;;
+  -n|--no-move)
+    NoMove=Y
+    shift
+    ;;
+  -\?|--help)
+    printf '%s\n' "Help text for $called not yet written."
+    exit 2
+    ;;
+  esac
 fi
-Targets="$(printf %s "$Targets" | tr "$Separator" '\n')"
+
+Targets=""
+if [ $# = 0 ]
+then
+  Targets="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade"
+  Targets="$(printf %s "$Targets" | tr "$Separator" '\n')"
+elif [ $# = 1 ] && printf '%s' "$1" | fgrep "$Separator"
+  Targets="$(printf %s "$1" | tr "$Separator" '\n')"
+else
+  for i in "$@"
+  do
+    Targets="$Targets$(fprint '\n%s' "$i")"
+  done
+fi
 
 if printf '%s' "$Targets" | tr ' ' '_' | egrep -q '[[:space:]]|[[:cntrl:]]'
 then
@@ -102,11 +109,11 @@ Fuzzy=N
 if ! printf '%s' "$Targets" | grep -vxq '[/[:alnum:]][- +./[:alnum:]_~^]*'
 then
   Fuzzy=Y
-  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/*'/")"
-  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/*'/")"
+  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/*"/')"
+  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/*"/')"
 else
-  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e "s/^/'/" -e "s/$/'/")"
-  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e "s/^/'/" -e "s/$/'/")"
+  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/"/')"
+  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/"/')"
 fi
 
 # Check PathTargets coarsly
@@ -214,21 +221,21 @@ then
       fi
       ;;
     0_*)
-      printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile"
+      printf '%s' "  Building RPM(s) from archive $i (because its SRPM already exists)" | tee -a "$LogFile" >&2
       if eval eval rpmbuild -v -tb "$i" >> "'\"\$LogFile\"'" 2>&1
       then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
       else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     *_0)
-      printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile"
+      printf '%s' "  Building SRPM from archive $i (because an RPM for it already exists)" | tee -a "$LogFile" >&2
       if eval eval rpmbuild -v -ts "$i" >> "'\"\$LogFile\"'" 2>&1
       then printf '%s\n' " succeded." | tee -a "$LogFile" >&2
       else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
       fi
       ;;
     *_*)
-     printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile"
+     printf '%s\n' "  Skip building from archive $i because its SRPM & an RPM both already exist." | tee -a "$LogFile" >&2
       ;;
     *)
       printf '%s\n' "  Warning: Something went wrong when determining what to build (RPM and/or SRPM) from archive $i: Thus skipping it!" | tee -a "$LogFile" >&2
@@ -304,7 +311,7 @@ else
     printf '%s\n' "." | tee -a "$LogFile" >&2
     case "$(find -L RPMS -maxdepth 2 -name "${sNVR}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
-      printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile"
+      printf '%s' "  Building RPM(s) & SRPM from archive $i" | tee -a "$LogFile" >&2
       if rpmbuild -v -ba "$t$o" >> "$LogFile" 2>&1
       then printf '%s\n' " succeeded." | tee -a "$LogFile" >&2
       else printf '%s\n' " failed!" | tee -a "$LogFile" >&2
