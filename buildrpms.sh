@@ -87,15 +87,19 @@ then
   esac
 fi
 
+List=""
 Targets=""
 if [ $# = 0 ]
 then
-  Targets="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade"
-  Targets="$(printf %s "$Targets" | tr "$Separator" '\n')"
+  List="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade"
+  List="$(printf %s "$List" | tr "$Separator" '\n')"
 elif [ $# = 1 ] && printf '%s' "$1" | fgrep "$Separator"
-  Targets="$(printf %s "$1" | tr "$Separator" '\n')"
+then
+  List="$(printf %s "$1" | tr "$Separator" '\n')"
 else
-  for i in "$@"
+  List="$@"
+fi
+for i in $List
   do
     Targets="$Targets$(fprint '\n%s' "$i")"
   done
