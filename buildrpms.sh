@@ -4,15 +4,19 @@ set -uC  # Add -e later
 #        1         2         3         4         5         6         7         8
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-# buildrpms.sh expects a colon (:) separated list of tar archive paths
-# (including simple names) as each item in then only non-option argument or
-# each item as a single parameter or a mix of both.  The archive paths may
-# either be truncated (i.e., provide only a path including the beginning of a
-# name) or contain shell type wildcards (? * []).  No white-space or control
-# characters are allowed in the argument string or real file paths processed,
-# except for the simple space character, which must be quoted by a backslash
-# in the argument string, as all other critical characters (|  & ; ( ) < >),
-# plus the dollar sign (and wildcard characters to be retained as is), too.
+# buildrpms.sh expects either a colon (:) separated list of tar archive paths
+# (including simple names) as each item in the only non-option argument or
+# each item as a single argument (both cases are equal for a single archive
+# path).  The archive paths may either be truncated (i.e., provide only a path
+# including the beginning of a name), or start with a tilde (~) or contain
+# shell type wildcards (? * [ ]); for these wildcard characters and the
+# backslash (\) to be retained as is, each must be protected by a prepended
+# backslash (\), regardless of any additional quoting described below.
+# No white-space, control or apostrophe characters are allowed in an argument.
+# If a Shell's reserved character (& ( ) ; < > ` |), the dollar sign or the
+# double-quote character ($ ") shall be matched, the whole argument (or at
+# least the part containing these characters) must be enclosed by a pair of
+# apostrophes ('); mind that double-quotes (") are not suitable for this.
 # buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
 # spec file of each archive found, processes it and moves each valid archive
@@ -96,24 +100,25 @@ else
     Targets="$Targets$(fprint '\n%s' "$i")"
   done
 fi
+Targets="$(fprint '%s' "$Targets" | fgrep -vx '')"
 
-if printf '%s' "$Targets" | tr ' ' '_' | egrep -q '[[:space:]]|[[:cntrl:]]'
+if printf '%s' "$Targets" | grep -q "[[:cntrl:][:space:]']"
 then
-  printf '%s\n' "Aborting: Argument string \"$Targets\" contains a white-space other than the simple space or control character!" | tee -a "$LogFile" >&2
+  printf '%s\n%s\n' "Aborting: At least one argument contains either a white-space, control or apostrophe character:" "$Targets" | tee -a "$LogFile" >&2
   exit 3
 fi
 
-Fuzzy=N
-# Quote each line and append "*" to fuzzy entries.
+# Single-quote each line, protect critical characters and append "*" to fuzzy entries.
 # Both Path- and File-Targets will only be expanded when used.
-if ! printf '%s' "$Targets" | grep -vxq '[/[:alnum:]][- +./[:alnum:]_~^]*'
+if printf '%s' "$Targets" | egrep -q '[^\][]*?[]|^~'  # Contains unprotected * ? [ ] or leading ~
 then
-  Fuzzy=Y
-  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/*"/')"
-  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/*"/')"
+  Fuzzy=N
+  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/'/")"
+  PTargets="$(printf '%s' "$Targets" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$//")"
 else
-  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/^/"/' -e 's/$/"/')"
-  PTargets="$(printf '%s' "$Targets" | fgrep / | sed -e 's/^/"/' -e 's/$/"/')"
+  Fuzzy=Y
+  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/*'/")"
+  PTargets="$(printf '%s' "$Targets" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/*'/")"
 fi
 
 # Check PathTargets coarsly
@@ -135,7 +140,6 @@ gTargets=""
 # For "maxdepth=1":  ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here. 
 # For "maxdepth=2":  ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$' | tr -d '@'  # needs complex post-processing, directories appended with ":" must be prepended recursively
 # For no "maxdepth": ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # "| tr -d '@'" discards appended link markers 
-
 for i in $FTargets
 do
   if [ "$InPlace" = Y ]
