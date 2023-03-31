@@ -8,21 +8,35 @@ set -uC  # Add -e later
 # (including simple names) as each item in the only non-option argument or
 # each item as a single argument (both cases are equal for a single archive
 # path).  The archive paths may either be truncated (i.e., provide only a path
-# including the beginning of a name), or start with a tilde (~) or contain
-# shell type wildcards (? * [ ]); for these wildcard characters and the
-# backslash (\) to be retained as is, each must be protected by a prepended
-# backslash (\), regardless of any additional quoting described below.
-# No white-space, control or apostrophe characters are allowed in an argument.
-# If a Shell's reserved character (& ( ) ; < > ` |), the dollar sign or the
-# double-quote character ($ ") shall be matched, the whole argument (or at
-# least the part containing these characters) must be enclosed by a pair of
-# apostrophes ('); mind that double-quotes (") are not suitable for this.
+# including or comprising the beginning of a name) and not contain one of the
+# "critical characters" described below (respectively the whole colon separated
+# path list, if a single non-option argument is provided), or a whole argument
+# (or at least the part containing the "critical characters") must be enclosed
+# ("quoted") in a pair of apostrophes (aka single-quotes: '); alternatively a 
+# pair of quotation marks (aka double-quotes: ") may be used for this purpose
+# in the same way as two apostrophes, but then three backslashes (\\\) have to
+# be prepended to every backslash (\) of the string constructed according to
+# the following rules (i.e., regardless if a backslash is an original one or
+# one inserted due to applying the rules below).
+# - No white-space, control or apostrophe (') characters are allowed in a
+#   provided archive path.
+# - An archive path which is not a trucated one (see above) may start with a
+#   tilde (~) and / or contain shell type wildcards (? * [ ]); for these 
+#   characters and the backslash (\) to be retained as such, each must be
+#   protected by a prepended backslash (\).  If a tilde is not the first
+#   character of an archive path, it does not need to be protected by a
+#   backslash.
+# - The Shell's reserved characters (& ( ) ; < > ` |), the dollar sign ($) and
+#   the double-quote character (") in an archive path must always be protected
+#   by a backslash.
+#
 # buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
 # spec file of each archive found, processes it and moves each valid archive
-# to the ./SOURCES directory; "-n|--no-move" links each valid archive instead
-# of moving.  "-i|--in-place" omits extracting and processing of spec files
-# and directly uses the archives at their original location.
+# to the ./SOURCES directory; "-n|--no-move" links each valid archive in
+# ./SOURCES instead of moving.  "-i|--in-place" omits extracting and
+# processing of spec files and directly uses the archives at their original
+# location.
 # If no archive list is provided, buildrpms.sh will use an internal list.
 
 # Minimum requirements of RPM for %{name}-%{version} strings, according to
@@ -99,31 +113,30 @@ then
 else
   List="$@"
 fi
+
 for i in $List
-  do
-    Targets="$Targets$(fprint '\n%s' "$i")"
-  done
+do
+  if printf '%s' "$i" | grep -q "[[:cntrl:][:space:]']"
+  then
+    printf '%s\n%s\n' "Warning: Omitting archive path \"$i\", because it contains either a white-space, control or apostrophe character!" "$Targets" | tee -a "$LogFile" >&2
+    continue
+  fi
+  # Single-quote each line, protect critical characters and append "*" to potentially truncated entries.
+  # Both Path- and File-Targets will only be expanded when used.
+  if printf '%s' "$i" | egrep -q '[^\][]*?[]|^~'  # Needs to be reworked and sync'ed with into comment
+  then  # Contains unprotected * ? [ ] or leading ~
+    i="$(printf '%s' "$i" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/'/")"
+    i="$(printf '%s' "$i" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$//")"
+  else
+    i="$(printf '%s' "$i" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/*'/")"
+    i="$(printf '%s' "$i" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/*'/")"
+  fi
+  Targets="$Targets$(fprint '\n%s' "$i")"
+done
 fi
 Targets="$(fprint '%s' "$Targets" | fgrep -vx '')"
 
-if printf '%s' "$Targets" | grep -q "[[:cntrl:][:space:]']"
-then
-  printf '%s\n%s\n' "Aborting: At least one argument contains either a white-space, control or apostrophe character:" "$Targets" | tee -a "$LogFile" >&2
-  exit 3
-fi
 
-# Single-quote each line, protect critical characters and append "*" to fuzzy entries.
-# Both Path- and File-Targets will only be expanded when used.
-if printf '%s' "$Targets" | egrep -q '[^\][]*?[]|^~'  # Contains unprotected * ? [ ] or leading ~
-then
-  Fuzzy=N
-  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/'/")"
-  PTargets="$(printf '%s' "$Targets" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$//")"
-else
-  Fuzzy=Y
-  FTargets="$(printf '%s' "$Targets" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/*'/")"
-  PTargets="$(printf '%s' "$Targets" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/*'/")"
-fi
 
 # Check PathTargets coarsly
 RTargets=""
