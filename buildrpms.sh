@@ -9,26 +9,26 @@ set -uC  # Add -e later
 # each item as a single argument (both cases are equal for a single archive
 # path).  The archive paths may either be truncated (i.e., provide only a path
 # including or comprising the beginning of a name) and not contain one of the
-# "critical characters" described below (respectively the whole colon separated
-# path list, if a single non-option argument is provided), or a whole argument
+# wildcard characters listed below.  If a archive path contains a "critical character" (respectively the whole colon separated
+# path list, if a single non-option argument is provided), then the whole argument
 # (or at least the part containing the "critical characters") must be enclosed
-# ("quoted") in a pair of apostrophes (aka single-quotes: '); alternatively a 
-# pair of quotation marks (aka double-quotes: ") may be used for this purpose
-# in the same way as two apostrophes, but then three backslashes (\\\) have to
-# be prepended to every backslash (\) of the string constructed according to
-# the following rules (i.e., regardless if a backslash is an original one or
-# one inserted due to applying the rules below).
-# - No white-space, control or apostrophe (') characters are allowed in a
+# ("quoted") in a pair of apostrophes (aka single-quotes: ')
+# - White-space, control or apostrophe (') characters are _not_ allowed in a
 #   provided archive path.
+# - The Shell's reserved characters (& ( ) ; < > ` |), the dollar sign ($) and
+#   the double-quote character (") are "critical characters".
+# - An archive path which may start with a
+#   tilde (~) and / or contain shell type wildcards (? * [ ]); for these 
+#   characters and the backslash (\) to be retained as such, each must be
+#   protected by a prepended backslash (\).  If a tilde is not the first
+#   character of an archive path, it does not constitute a "critical character" does not need to be protected by a
+#   backslash.
 # - An archive path which is not a trucated one (see above) may start with a
 #   tilde (~) and / or contain shell type wildcards (? * [ ]); for these 
 #   characters and the backslash (\) to be retained as such, each must be
 #   protected by a prepended backslash (\).  If a tilde is not the first
-#   character of an archive path, it does not need to be protected by a
+#   character of an archive path, it does not constitute a "critical character" does not need to be protected by a
 #   backslash.
-# - The Shell's reserved characters (& ( ) ; < > ` |), the dollar sign ($) and
-#   the double-quote character (") in an archive path must always be protected
-#   by a backslash.
 #
 # buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
@@ -133,10 +133,7 @@ do
   fi
   Targets="$Targets$(fprint '\n%s' "$i")"
 done
-fi
 Targets="$(fprint '%s' "$Targets" | fgrep -vx '')"
-
-
 
 # Check PathTargets coarsly
 RTargets=""
