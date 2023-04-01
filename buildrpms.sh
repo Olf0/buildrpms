@@ -123,18 +123,28 @@ list ()
     if printf '%s' "$i" | fgrep -q /
     then
       k="${i%%/*}"
-      if [ -z "$k" ]
-      then :
-      elif [ -z ${k%%~*} ]
-      then k="$(printf %s $k)/"
-      else k="./"
+      if [ -z "$k" ]  # Starts with a "/"
+      then j="$i"
+      elif [ -z "${k%%~*}" ]  # First path element starts with a "~"
+      then
+        k="$(echo $k)"  # May allow for code-exec
+        j="${i#*/}"
+      else  # First path element starts with anything but / or ~
+        k="."
+        j="$i"
       fi
-      j="${i#*/}"
+      
       # Intro comment needs to be reworked to conform to:
-      if printf '%s' "$j" | grep -q '[^\][]*?[]'  # Contains an unprotected * ? [ ]
-      # r="sadasd/hd/bjh*asc/cwd"; echo "$r"; s="$(printf '%s\n' "$r" | sed 's|\(.*\)/.*[^\][]*?[].*|\1|')"; echo "$s"; t="$(printf '%s\n' "$r" | sed "s|$s/||")"; echo "$t"
+      if [ -n "${i##*/}" ] || printf '%s' "$j" | grep -q '[^\][]*?[]'  # Does not end in "/" or contain an unprotected * ? [ ]
+      # r="a/b/c*d/e/f"; echo "$r"; s="$(printf '%s\n' "$r" | sed 's|\(.*\)/.*[^\][]*?[].*|\1|')"; echo "$s"; t="$(printf '%s\n' "$r" | sed "s|$s/||")"; echo "$t"
       then 
-        bla="$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$j" -print 2> /dev/null)"
+        List="$List$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$j" -print 2> /dev/null)"
+      else
+        List="$List$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/${j}*" -print 2> /dev/null)"
+      fi
+      
+      
+      
       i="$k/$j"
         printf '%s' "$j" | sed 's|^\(.*\)/.*[^\][]*?[]|\1|'
         printf '%s' "$j" | sed 's|[^\][]*?[].*/\(.*\)$|\1|'
