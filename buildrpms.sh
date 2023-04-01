@@ -23,13 +23,16 @@ set -uC  # Add -e later
 #   protected by a prepended backslash (\).  If a tilde is not the first
 #   character of an archive path, it does not constitute a "critical character" does not need to be protected by a
 #   backslash.
-# - An archive path which is not a trucated one (see above) may start with a
-#   tilde (~) and / or contain shell type wildcards (? * [ ]); for these 
+# - An archive path which is not a truncated one (see above) may start with a
+#   tilde (~) and / or contain shell type wildcards (? * [ ]); for these
 #   characters and the backslash (\) to be retained as such, each must be
-#   protected by a prepended backslash (\).  If a tilde is not the first
-#   character of an archive path, it does not constitute a "critical character" does not need to be protected by a
-#   backslash.
+#   protected by a prepended backslash (\).  Side note: If a tilde is not the
+#   first character of an archive path or the archive path contains no other
+#   path elements (i.e., directories) than a file name (both, truncated or with
+#   wildcards), the tilde does not constitute a "critical character" hence does
+#   not need to be protected by a backslash.
 #
+# If you want only a single arrchive path to be scrutinised and need a colon as regular character in this path, add an empty path as a first argument: ''
 # buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place" and "-n|--no-move".  By default buildrpms.sh extracts the
 # spec file of each archive found, processes it and moves each valid archive
@@ -58,6 +61,8 @@ set -uC  # Add -e later
 #   5  Error while interacting with the OS (reading / writing from the filesystem, calling programs, etc.)
 #   6  Error while executing one of the preparatory steps
 #   7  Error internal to this script
+
+### Preamble
 
 export LC_ALL=POSIX  # For details see https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_02
 export POSIXLY_CORRECT=1  # Also necessary for a sane `df` output, see https://github.com/Olf0/sfos-upgrade/issues/73 
@@ -101,30 +106,65 @@ then
   esac
 fi
 
-List=""
-Targets=""
+### Function(s)
+list ()
+{
+  k="'"
+  List=""
+  for i in "$@"  # "$@" cannot be copied as is, i.e., at="$@" does not work for copying
+  do
+    if printf '%s' "$i" | grep -q "[[:cntrl:][:space:]']"  # Ultimately not all spaces, but only vertical ones (\f\n\r\v) are sufficient.
+    then
+      printf '%s\n%s\n' "Warning: Omitting archive path \"${i}\", because it contains either a white-space, control or apostrophe character!" "$Targets" | tee -a "$LogFile" >&2
+      continue
+    fi
+    # Single-quote each line, protect critical characters and append "*" to potentially truncated entries.
+    # Both Path- and File-Targets will only be expanded when used.
+    if printf '%s' "$i" | fgrep -q /
+    then
+      k="${i%%/*}"
+      if [ -z "$k" ]
+      then :
+      elif [ -z ${k%%~*} ]
+      then k="$(printf %s $k)/"
+      else k="./"
+      fi
+      j="${i#*/}"
+      # Intro comment needs to be reworked to conform to:
+      if printf '%s' "$j" | grep -q '[^\][]*?[]'  # Contains an unprotected * ? [ ]
+      # r="sadasd/hd/bjh*asc/cwd"; echo "$r"; s="$(printf '%s\n' "$r" | sed 's|\(.*\)/.*[^\][]*?[].*|\1|')"; echo "$s"; t="$(printf '%s\n' "$r" | sed "s|$s/||")"; echo "$t"
+      then 
+        bla="$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$j" -print 2> /dev/null)"
+      i="$k/$j"
+        printf '%s' "$j" | sed 's|^\(.*\)/.*[^\][]*?[]|\1|'
+        printf '%s' "$j" | sed 's|[^\][]*?[].*/\(.*\)$|\1|'
+        
+      else i="$k${j}*"
+      fi
+    
+    
+    List="$List$(printf '\n%s' "$k$i$k")"
+  done
+}
+
+### Main script
+
 if [ $# = 0 ]
-then
-  List="crypto-sdcard${Separator}mount-sdcard${Separator}sfos-upgrade"
-  List="$(printf %s "$List" | tr "$Separator" '\n')"
-elif [ $# = 1 ] && printf '%s' "$1" | fgrep "$Separator"
-then
-  List="$(printf %s "$1" | tr "$Separator" '\n')"
-else
-  List="$@"
+then list crypto-sdcard mount-sdcard sfos-upgrade
+else list "$@"
 fi
 
+Targets=""
 for i in $List
 do
-  if printf '%s' "$i" | grep -q "[[:cntrl:][:space:]']"
-  then
-    printf '%s\n%s\n' "Warning: Omitting archive path \"$i\", because it contains either a white-space, control or apostrophe character!" "$Targets" | tee -a "$LogFile" >&2
-    continue
-  fi
-  # Single-quote each line, protect critical characters and append "*" to potentially truncated entries.
-  # Both Path- and File-Targets will only be expanded when used.
-  if printf '%s' "$i" | egrep -q '[^\][]*?[]|^~'  # Needs to be reworked and sync'ed with into comment
-  then  # Contains unprotected * ? [ ] or leading ~
+  
+      
+      
+    j="${i%%/*}"
+    if printf '%s' "$j" | grep -q '^~[^][~]'
+    j="${i%%/*}"
+  if printf '%s' "$i" | egrep -q '[^\][]*?[]'  # Intro comment needs to be reworked to conform
+  then  # Contains unprotected * ? [ ]
     i="$(printf '%s' "$i" | fgrep -v / | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$/'/")"
     i="$(printf '%s' "$i" | fgrep /    | sed -e 's/["$&();<>`|]/\\&/g' -e "s/^/'/" -e "s/$//")"
   else
