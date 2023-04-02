@@ -185,7 +185,7 @@ if [ "$InPlace" = Y ]
 then
   printf '%s\n' "[Info] Processing in place:" | tee -a "$LogFile" >&2
 else
-  TmpDir="$(mktemp -p -d "${Called}.XXX")"  # -t instead of -p should yield the same
+  TmpDir="$(mktemp -dt "${Called}.XXX")"  # equivalent to `mktemp -dp "/tmp" "${Called}.XXX"`
   printf '%s\n' "[Info] Extracting and processing spec file from:" | tee -a "$LogFile" >&2
 fi
 k=1
