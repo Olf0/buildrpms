@@ -147,12 +147,12 @@ list ( )
       then                     # May allow for code-exec via embedded metacharacters (reserved characters) "| & ; ( ) newline"
         k="$(eval echo "$k")"  # or control operators (as token / word) "|| & && ; ;; ;& ;;& ( ) | |& <newline>".
         m="${i#*/}"
-      elif o="$(printf '%s' "$i" | grep -o '^\.\.\?/\(\.\.\?/\)*')"
+      elif [ "$k" = "." ]
       then
-        k="${o%/}"
-        m="${i#"$o"}"
-      else  # First path element starts with anything but "/", "~" or n-times "./" and/or "../"
-        k="."
+        k="$PWD"
+        m="${i#*/}"
+      else  # Path does start with something else than "/", "~*/" or "./"
+        k="$PWD"
         m="$i"
       fi
       o="$k/$m"
@@ -160,7 +160,7 @@ list ( )
       then k="${o%/*"${p#/}"}"  # See also https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_03
       else k="${o%/*}"
       fi
-      m="${o##"$k"/}"
+      m="${o#"$k"/}"
       # Intro comment needs to be rep='/home/bsi/tmp/b?'worked to conform to:
       if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
