@@ -233,44 +233,44 @@ do
     case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
-      printf '%s' "$i" | tee -a "$LogFile"
-      printf '\n' >> "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '\n\n' >> "$LogFile"
       if rpmbuild -v -ta "$i" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
-        printf ' %s' "succeeded." | tee -a "$LogFile" >&2
+        printf '%s' "succeeded." | tee -a "$LogFile" >&2
         printf '\n' | tee -a "$LogFile"
       else
         printf '\n' >> "$LogFile"
-        printf ' %s\n' "failed!" | tee -a "$LogFile"
+        printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
       ;;
     0_*)
       printf '%s ' "Building RPM(s) (because the SRPM already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s' "$i" | tee -a "$LogFile"
-      printf '\n' >> "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '\n\n' >> "$LogFile"
       if rpmbuild -v -tb "$i" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
-        printf ' %s' "succeeded." | tee -a "$LogFile" >&2
+        printf '%s' "succeeded." | tee -a "$LogFile" >&2
         printf '\n' | tee -a "$LogFile"
       else
         printf '\n' >> "$LogFile"
-        printf ' %s\n' "failed!" | tee -a "$LogFile"
+        printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
       ;;
     *_0)
       printf '%s ' "Building SRPM (because an RPM for it already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s' "$i" | tee -a "$LogFile"
-      printf '\n' >> "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '\n\n' >> "$LogFile"
       if rpmbuild -v -ts "$i" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
-        printf ' %s' "succeeded." | tee -a "$LogFile" >&2
+        printf '%s' "succeeded." | tee -a "$LogFile" >&2
         printf '\n' | tee -a "$LogFile"
       else
         printf '\n' >> "$LogFile"
-        printf ' %s\n' "failed!" | tee -a "$LogFile"
+        printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
       ;;
     *_*)
@@ -354,44 +354,44 @@ do
     case "$(find -L RPMS -maxdepth 2 -name "${sNVR}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
-      printf '%s' "$i" | tee -a "$LogFile"
-      printf '\n' >> "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '\n\n' >> "$LogFile"
       if rpmbuild -v -ba "$t/$o" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
-        printf ' %s' "succeeded." | tee -a "$LogFile" >&2
+        printf '%s' "succeeded." | tee -a "$LogFile" >&2
         printf '\n' | tee -a "$LogFile"
       else
         printf '\n' >> "$LogFile"
-        printf ' %s\n' "failed!" | tee -a "$LogFile"
+        printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
       ;;
     0_*)
       printf '%s ' "Building RPM(s) (because the SRPM already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s' "$i" | tee -a "$LogFile"
-      printf '\n' >> "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '\n\n' >> "$LogFile"
       if rpmbuild -v -bb "$t/$o" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
-        printf ' %s' "succeeded." | tee -a "$LogFile" >&2
+        printf '%s' "succeeded." | tee -a "$LogFile" >&2
         printf '\n' | tee -a "$LogFile"
       else
         printf '\n' >> "$LogFile"
-        printf ' %s\n' "failed!" | tee -a "$LogFile"
+        printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
       ;;
     *_0)
       printf '%s ' "Building SRPM (because an RPM for it already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s' "$i" | tee -a "$LogFile"
-      printf '\n' >> "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '\n\n' >> "$LogFile"
       if rpmbuild -v -bs "$t/$o" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
-        printf ' %s' "succeeded." | tee -a "$LogFile" >&2
+        printf '%s' "succeeded." | tee -a "$LogFile" >&2
         printf '\n' | tee -a "$LogFile"
       else
         printf '\n' >> "$LogFile"
-        printf ' %s\n' "failed!" | tee -a "$LogFile"
+        printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
       ;;
     *_*)
