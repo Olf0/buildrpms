@@ -127,13 +127,17 @@ list ( )
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by path:" "$i" | tee -a "$LogFile" >&2
       k="${i%%/*}"
       if [ -z "$k" ]  # Starts with a "/"
-      then m="$i"
+      then m="${i#/}"
       elif [ -z "${k%%~*}" ]  # First path element starts with a "~"
       then
         k="$(echo $k)"  # May allow for code-exec via embedded metacharacters (reserved characters) "| & ; ( ) newline"
                         # or control operators (as token / word) "|| & && ; ;; ;& ;;& ( ) | |& <newline>".
         m="${i#*/}"
-      else  # First path element starts with anything but "/" or "~"
+      elif o="$(printf '%s' "$i" | grep -o '^\.\.\?/\(\.\.\?/\)*')"
+      then
+        k="${o%/}"
+        m="${i##$o}"
+      else  # First path element starts with anything but "/", "~" or n-times "./" and/or "../"
         k="."
         m="$i"
       fi
