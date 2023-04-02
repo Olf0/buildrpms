@@ -135,20 +135,19 @@ list ( )
       elif o="$(printf '%s' "$i" | grep -o '^\.\.\?/\(\.\.\?/\)*')"
       then
         k="${o%/}"
-        m="${i#$o}"
+        m="${i#"$o"}"
       else  # First path element starts with anything but "/", "~" or n-times "./" and/or "../"
         k="."
         m="$i"
       fi
       o="$k/$m"
-      if p="$(printf '%s' "$o" | egrep -o '(^|^.*[^\])(\\\\)*([*?]|\[[^/]+\])+')"  # Hope grep is "greedy" as usual
-      then m="${o#${p}*/}"
-      else m="${o##*/}"
+      if p="$(printf '%s' "$o" | egrep -o '(^|[^\])(\\\\)*([*?]|\[[^/]+\])+.*$')"  # `grep` is "greedy" as always
+      then k="${o%/*"${p#/}"}"  # See also https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_03
+      else k="${o%/*}"
       fi
-      k="${o%/$m}"
-      # Intro comment needs to be reworked to conform to:
-      if [ -n "${o##*/}" ] || [ -n "$p" ]  # Does not end in "/" or does contain an unprotected * ? [ ]
-        # See also https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_03
+      m="${o##"$k"/}"
+      # Intro comment needs to be rep='/home/bsi/tmp/b?'worked to conform to:
+      if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
       then
         List="$List$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$m" -print 2> /dev/null)"
       else
