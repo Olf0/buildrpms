@@ -180,6 +180,12 @@ else list "$@"
 # else Paths="$(list "$@")"
 fi
 
+if [ -z "$List" ]
+then
+  printf '%s\n' "[Warning] No archive files found: aborting!" | tee -a "$LogFile" >&2
+  exit 1
+fi
+
 # Building the (S)RPMs
 if [ "$InPlace" = Y ]
 then
