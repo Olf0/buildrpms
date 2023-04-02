@@ -129,9 +129,8 @@ list ( )
       if [ -z "$k" ]  # Starts with a "/"
       then m="${i#/}"
       elif [ -z "${k%%~*}" ]  # First path element starts with a "~"
-      then
-        k="$(echo $k)"  # May allow for code-exec via embedded metacharacters (reserved characters) "| & ; ( ) newline"
-                        # or control operators (as token / word) "|| & && ; ;; ;& ;;& ( ) | |& <newline>".
+      then                          # May allow for code-exec via embedded metacharacters (reserved characters) "| & ; ( ) newline"
+        k="$(eval echo "$k")"  # or control operators (as token / word) "|| & && ; ;; ;& ;;& ( ) | |& <newline>".
         m="${i#*/}"
       elif o="$(printf '%s' "$i" | grep -o '^\.\.\?/\(\.\.\?/\)*')"
       then
