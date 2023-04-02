@@ -300,9 +300,9 @@ do
     fi
     t="$TmpDir/$p"
     mkdir "$t"
-    ln -s "$i" "${t}.lnk"  # Results in `ln -s <expanded path> "${t}.lnk"`
+    ln -s "$i" "${t}.lnk"  # Results in `ln -s <expanded path> "/tmp/buildrpms.XXX/$p.lnk"
     cd "$t"
-    if tar -xof "../${t}.lnk" "$o"
+    if tar -xof "${t}.lnk" "$o"
     then
       cd "$MyPWD"
     else
