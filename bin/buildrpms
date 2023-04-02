@@ -6,7 +6,7 @@ export POSIXLY_CORRECT=1  # Necessary for a sane `df` output etc., see e.g., htt
 #        1         2         3         4         5         6         7         8
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-# buildrpms expects a list of tar archive paths (including simple file names,
+# `buildrpms` takes a list of tar archive paths (including simple file names,
 # absolute, relative paths and homedir expansion by a leading tilde "~") with
 # each list item (i.e., archive path) as a single argument.  Provided paths
 # may point to files or directories; if a directory is addressed, the whole
@@ -19,6 +19,11 @@ export POSIXLY_CORRECT=1  # Necessary for a sane `df` output etc., see e.g., htt
 # is searched.  The only exception is the directory "./SOURCES", if the option
 # "-i|--in-place" is used; note that "~/Downloads/*SOURCES" is still searched.
 #
+# Without the option "-i|--in-place, `buildrpms` avoids re-building archives
+# for which an (S)RPM in the directories ./RPMS or ./SRPMS exists by analysing
+# spec file content, the archive's top level directory and the archive name (in
+# this order of precedence).
+#
 # The archive paths may either contain shell type wildcard characters
 # (? * [ ]), or be truncated (i.e., provide only a path without wildcards,
 # including or comprising the beginning of a archive file name or a complete
@@ -27,18 +32,28 @@ export POSIXLY_CORRECT=1  # Necessary for a sane `df` output etc., see e.g., htt
 # wildcard characters, even though the whole directory tree below the provided
 # path is searched for valid archive files.
 #
-# Vertical white-space and control characters are not allowed in the provided
+# Control characters, which include all horizontal and vertical white spaces
+# except for the simple space character, are not allowed in the provided
 # archive paths.
 #
-# buildrpms.sh currently recognises the mutually exclusive options "-?|--help",
-# "-i|--in-place", "-n|--no-move" and "-d|--debug".  By default buildrpms.sh
+# Mind to protect wildcards, the tilde and other special characters from being
+# expanded by a shell, if `buildrpms` is intended to interpret them.
+#
+# `buildrpms` currently recognises the mutually exclusive options "-?|--help",
+# "-i|--in-place", "-n|--no-move" and "-d|--debug".  By default `buildrpms`
 # extracts the spec file of each archive found, processes it and moves each
 # valid archive to the ./SOURCES directory; "-n|--no-move" links each valid
-# archive in ./SOURCES instead of moving.  "-i|--in-place" omits extracting
-# and processing of spec files and directly uses the archives at their
-# original location.
-# If no archive list is provided, buildrpms.sh will use an internal list of
+# archive in ./SOURCES instead of moving.  "-i|--in-place" omits extracting and
+# processing of spec files and directly uses the archives at their original
+# location.
+# If no archive path list is provided, `buildrpms` will use an internal list of
 # archive paths.
+#
+# `Buildrpms` outputs (to StdOUT) a the list of archive paths, with which
+# ultimately `rpmbuild` is called after a multitude of checks.  All user
+# oriented messages are directed to StdERR, except for the aforementioned
+# archive paths and the help output.  The option "-d|--debug" provides some
+# additional output to StdERR when processing the input list.
 
 # Exit codes:
 #   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbuild run(s)
@@ -148,7 +163,7 @@ list ( )
       m="${o##"$k"/}"
       # Intro comment needs to be rep='/home/bsi/tmp/b?'worked to conform to:
       if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
-      then
+      then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$m" -print 2> /dev/null)")"
       else
         List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/${m}*" -print 2> /dev/null)")"
@@ -156,16 +171,8 @@ list ( )
     else # Search for FileTargets
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
       DDirs='~/Downloads ~/android_storage/Download'
-      # find -L $DDirs -type f \! -executable \! -empty  -perm /444 -name "${i}*.tar*" -print  # Output not directly sortable by mtime, but mtime can be prepended, see line below.
-      # find -L . -path SOURCES -prune -o -type f \! -executable \! -empty -perm /444 -name "${i}*.tar*" -printf '%T@ %p\n' | sed 's/\.//' | sort -nr
-      # For "maxdepth=1":  ls -QL1pdt SOURCES/${i}*.tar* 2>/dev/null | grep -v '/$')"  # ls' options -vr instead of -t also looked interesting, but fail in corner cases here.
-      # For "maxdepth=2":  ls -QL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$' | tr -d '@'  # needs complex post-processing, directories appended with ":" must be prepended recursively
-      # For no "maxdepth": ls -RQL1pFt SOURCES/${i}*.tar* 2>/dev/null | egrep -v '/$|:$|^$')"  # "| tr -d '@'"  # discards appended link markers
       if [ "$InPlace" = Y ]
-      then
-        # To double-eval into '%s\n':  eval eval printf "\"'%s\n'\"" …
-        # or more quirky "\''%s\n'\'" or even "\'%s'\n'\'"
-        # For variables to double-eval into "$var":  eval eval printf '%s' "'\"\$var\"'" …
+      then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
         List="$List$(printf '\n%s' "$(find -L . -path '*SOURCES' -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
       else
@@ -173,8 +180,8 @@ list ( )
       fi
     fi
   done
-  List="$(printf '%s' "$List" | fgrep -vx '')"
-  # printf '%s' "$List"
+  List="$(printf '%s\n' "$List" | fgrep -vx '')"  # Fix-up of slightly malconstructed List, see comments above.  Observation: `printf` seems to always swallow an extant, trailing newline character, which can be re-added by appending '\n' to the format string, and command substitution via "$()" deletes _all_ trailing newline characters!
+  [ $Debug = Y ] && printf '%s\n%s\n' "[Debug] Complete list of expanded archive paths, before down-selecting them:" "$List" | tee -a "$LogFile" >&2
   return 0
 }
 
@@ -204,8 +211,8 @@ else
   printf '%s\n' "[Info] Extracting and processing spec file from:" | tee -a "$LogFile" >&2
 fi
 k=0
-kMax="$(printf '%s' "$List" | wc -l)"
-while [ $k -le $kMax ]
+kMax="$(printf '%s\n' "$List" | wc -l)"
+while [ $k -lt $kMax ]
 do
   k=$((k+1))
   i="$(printf '%s' "$List" | sed -n "${k}P")"  # Pick k-th entry
