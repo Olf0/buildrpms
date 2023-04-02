@@ -16,10 +16,10 @@ export POSIXLY_CORRECT=1  # Necessary for a sane `df` output etc., see e.g., htt
 # file name; still the wildcard rules denoted below apply.  This name is used
 # to search for valid archive files in a list of directories containing "." and
 # "~/Downloads"; for each of these directories the whole directory tree below
-# is searched.  The only exception is the directory "./SOURCES", if the option
-# "-i|--in-place" is used; note that "~/Downloads/*SOURCES" is still searched.
+# is searched.  The only exception are directories named "SOURCES", if the
+# option "-i|--in-place" is used.
 #
-# Without the option "-i|--in-place, `buildrpms` avoids re-building archives
+# Without the option "-i|--in-place", `buildrpms` avoids re-building archives
 # for which an (S)RPM in the directories ./RPMS or ./SRPMS exists by analysing
 # spec file content, the archive's top level directory and the archive name (in
 # this order of precedence).
@@ -174,9 +174,9 @@ list ( )
       if [ "$InPlace" = Y ]
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
-        List="$List$(printf '\n%s' "$(find -L . -path '*SOURCES' -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
+        List="$List$(printf '\n%s' "$(find -L $PWD -path '*SOURCES' -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
       else
-        List="$List$(printf '\n%s' "$(find -L . $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
+        List="$List$(printf '\n%s' "$(find -L $PWD $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
       fi
     fi
   done
@@ -337,7 +337,7 @@ do
         if tIco="$(tar -tf "$TempDir/${t}.lnk" | fgrep "$sIco")"
         then
           cd "$t"
-          tar -xof "../${t}.lnk" "$tIco"
+          tar -xof "${t}.lnk" "$tIco"
           cd "$MyPWD"
           cp -sf "$(find "$t" -type f \! -executable \! -empty -perm /444 -name "$sIco" -print)" SOURCES/
           [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
