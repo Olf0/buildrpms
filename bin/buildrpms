@@ -69,7 +69,7 @@ MyPWD="$PWD"
 Called="$(basename "$0")"
 if printf '%s' " $(id -un) $(id -Gn) " | fgrep -q ' root '
 then
-  printf '%s\n' "Aborting: $Called shall not be started with root privileges!" >&2
+  printf '%s\n' "[Error] $Called shall not be started with root privileges: aborting!" >&2
   exit 3
 fi
 
@@ -149,9 +149,9 @@ list ( )
       # Intro comment needs to be rep='/home/bsi/tmp/b?'worked to conform to:
       if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
       then
-        List="$List$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$m" -print 2> /dev/null)"
+        List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/$m" -print 2> /dev/null)")"
       else
-        List="$List$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/${m}*" -print 2> /dev/null)"
+        List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable \! -empty -perm /444 -path "$k/${m}*" -print 2> /dev/null)")"
       fi
     else # Search for FileTargets
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
@@ -166,13 +166,14 @@ list ( )
         # To double-eval into '%s\n':  eval eval printf "\"'%s\n'\"" …
         # or more quirky "\''%s\n'\'" or even "\'%s'\n'\'"
         # For variables to double-eval into "$var":  eval eval printf '%s' "'\"\$var\"'" …
-        List="$List$(find -L $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)"
-        List="$List$(find -L . -path '*SOURCES' -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)"
+        List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
+        List="$List$(printf '\n%s' "$(find -L . -path '*SOURCES' -prune -o -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
       else
-        List="$List$(find -L . $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)"
+        List="$List$(printf '\n%s' "$(find -L . $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
       fi
     fi
   done
+  List="$(printf '%s' "$List" | fgrep -vx '')"
   # printf '%s' "$List"
   return 0
 }
