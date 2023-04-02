@@ -285,9 +285,9 @@ do
   else
     if o="$(printf '%s' "$m" | grep '\.spec$')"
     then
-      if [ "$(printf '%s' "$o" | wc -l)" != 1 ]
+      if [ "$(printf '%s\n' "$o" | wc -l)" != 1 ]
       then
-        printf '%s\n%s\n' "[Warning] Skipping archive \"${i}\", because more than a single spec file found in it:" "$s" | tee -a "$LogFile" >&2
+        printf '%s\n%s\n' "[Warning] Skipping archive \"${i}\", because more than a single spec file found in it:" "$o" | tee -a "$LogFile" >&2
         continue
       fi
     else
