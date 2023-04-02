@@ -202,10 +202,11 @@ else
   TmpDir="$(mktemp -dt "${Called}.XXX")"  # equivalent to `mktemp -dp "/tmp" "${Called}.XXX"`
   printf '%s\n' "[Info] Extracting and processing spec file from:" | tee -a "$LogFile" >&2
 fi
-k=1
+k=0
 kMax="$(printf '%s' "$List" | wc -l)"
-while [ $k -le $kMax ]
+while [ $k -lt $kMax ]
 do
+  k=$((k+1))
   i="$(printf '%s' "$List" | sed -n "${k}P")"  # Pick k-th entry
   if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
@@ -282,7 +283,7 @@ do
         continue
       fi
     else
-      printf '%s\n%' "[Notice] Skipping archive \"${i}\", because no spec file found in it." | tee -a "$LogFile" >&2
+      printf '%s\n' "[Notice] Skipping archive \"${i}\", because no spec file found in it." | tee -a "$LogFile" >&2
       continue
     fi
     p="${o%%/*}"
@@ -393,7 +394,6 @@ do
       ;;
     esac
   fi
-  k=$((k+1))
 done
 # rm -rf "$TmpDir"
 exit 0
