@@ -310,7 +310,7 @@ do
       continue
     fi
     mkdir -p SOURCES
-    sPre="$(sed -n '1,\_^[[:blank:]]*%prep$_P' "$t$o" | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*$_P' | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*#_P')"
+    sPre="$(sed -n '1,\_^[[:blank:]]*%prep$_P' "$t/$o" | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*$_P' | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*#_P')"
     sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][-+.[:alnum:]_~^]*')"
     sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
     sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
@@ -325,22 +325,22 @@ do
     then  # Icon tag to uncomment with path detected; mind that the first such tag is uncommented!
       uIco=Y
     fi
-    if [-n "$sIco" ]
+    if [ -n "$sIco" ]
     then
       if [ -e "SOURCES/$sIco" ]
       then
         if [ -r "SOURCES/$sIco" ] && [ ! -d "SOURCES/$sIco" ] && [ -s "SOURCES/$sIco" ]
-        then [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
+        then [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t/$o"
         else printf '%s' ", though notice that icon file referenced in spec file $o exists at SOURCES/${sIco}, but is not usable" | tee -a "$LogFile" >&2
         fi
       else
-        if tIco="$(tar -tf "$TempDir/${t}.lnk" | fgrep "$sIco")"
+        if tIco="$(tar -tf "${t}.lnk" | fgrep "$sIco")"
         then
           cd "$t"
           tar -xof "${t}.lnk" "$tIco"
           cd "$MyPWD"
           cp -sf "$(find "$t" -type f \! -executable \! -empty -perm /444 -name "$sIco" -print)" SOURCES/
-          [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t$o"
+          [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t/$o"
         else printf '%s' ", though notice that icon file $sIco is referenced in spec file ${o}, but not found in archive $i" | tee -a "$LogFile" >&2
         fi
       fi
@@ -354,7 +354,7 @@ do
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
       printf '%s' "$i" | tee -a "$LogFile"
       printf '\n' >> "$LogFile"
-      if rpmbuild -v -ba "$t$o" >> "$LogFile" 2>&1
+      if rpmbuild -v -ba "$t/$o" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
         printf ' %s' "succeeded." | tee -a "$LogFile" >&2
@@ -368,7 +368,7 @@ do
       printf '%s ' "Building RPM(s) (because the SRPM already exists) from archive" | tee -a "$LogFile" >&2
       printf '%s' "$i" | tee -a "$LogFile"
       printf '\n' >> "$LogFile"
-      if rpmbuild -v -bb "$t$o" >> "$LogFile" 2>&1
+      if rpmbuild -v -bb "$t/$o" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
         printf ' %s' "succeeded." | tee -a "$LogFile" >&2
@@ -382,7 +382,7 @@ do
       printf '%s ' "Building SRPM (because an RPM for it already exists) from archive" | tee -a "$LogFile" >&2
       printf '%s' "$i" | tee -a "$LogFile"
       printf '\n' >> "$LogFile"
-      if rpmbuild -v -bs "$t$o" >> "$LogFile" 2>&1
+      if rpmbuild -v -bs "$t/$o" >> "$LogFile" 2>&1
       then
         printf '\n' >> "$LogFile"
         printf ' %s' "succeeded." | tee -a "$LogFile" >&2
