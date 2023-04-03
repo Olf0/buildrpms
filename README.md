@@ -1,5 +1,6 @@
 # buildrpms
-**Script for building RPM packages from tar archives**
+**Script for building RPM packages from tar archives**<br />
+<br />
 
 ### Detailed description
 `buildrpms` takes a list of paths to tar archives (including simple file
