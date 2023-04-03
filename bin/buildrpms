@@ -189,6 +189,7 @@ list ( )
     else # Search for FileTargets
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
       DDirs='~/Downloads ~/android_storage/Download'
+      DDirs="$(eval echo "$DDirs")"  # Path expansion, here: tilde
       if [ "$InPlace" = Y ]
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable \! -empty -perm /444 -name "$i" -print 2> /dev/null)")"
