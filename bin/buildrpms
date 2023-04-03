@@ -377,10 +377,13 @@ do
     then
       cd "$t"
       if tar -xof "${t}.lnk" "$v"
-      then cp -sf "$t/$v" SOURCES/
-      else printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$v"
+      then 
+        cd "$MyPWD"
+        cp -sf "$t/$v" SOURCES/
+      else
+        cd "$MyPWD"
+        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$v"
       fi
-      cd "$MyPWD"
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
