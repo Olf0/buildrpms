@@ -314,13 +314,14 @@ do
       printf '%s\n' "[Notice] Skipping archive \"${i}\", because no spec file found in it." | tee -a "$LogFile" >&2
       continue
     fi
+    v="$(printf '%s' "$m" | grep -m 1 '\.rpmlintrc$')"
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
     then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
     t="$TmpDir/$p"
     mkdir "$t"
-    ln -s "$i" "${t}.lnk"  # Results in `ln -s <expanded path> "/tmp/buildrpms.XXX/$p.lnk"
+    ln -s "$i" "${t}.lnk"  # Results in `ln -s <expanded path> "/tmp/buildrpms.XXX/$p.lnk"`
     cd "$t"
     if tar -xof "${t}.lnk" "$o"
     then
@@ -371,6 +372,15 @@ do
       then cp -sf "$i" SOURCES/
       else mv -f "$i" SOURCES/
       fi
+    fi
+    if [ -n "$v" ]  # Path to .rpmlintrc file exists
+    then
+      cd "$t"
+      if tar -xof "${t}.lnk" "$v"
+      then cp -sf "$t/$v" SOURCES/
+      else printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$v"
+      fi
+      cd "$MyPWD"
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
@@ -424,6 +434,7 @@ do
       printf '%s %s\n' "$i" "skipped!" | tee -a "$LogFile"
       ;;
     esac
+    rm -f "SOURCES/$v"
   fi
 done
 # rm -rf "$TmpDir"
