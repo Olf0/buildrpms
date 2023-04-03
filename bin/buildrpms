@@ -235,6 +235,7 @@ while [ $k -lt $kMax ]
 do
   k=$((k+1))
   i="$(printf '%s' "$List" | sed -n "${k}P")"  # Pick k-th entry
+  j="${i##*/}"  # Equivalent to "$(basename "$i")"
   if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
@@ -247,7 +248,7 @@ do
     o="$(printf '%s' "$m" | head -1)"  # E.g., "xz-5.0.4/", note the trailing slash
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
-    then p="$(basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
+    then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
@@ -315,7 +316,7 @@ do
     fi
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
-    then p="$(basename "$i" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
+    then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
     t="$TmpDir/$p"
     mkdir "$t"
@@ -334,7 +335,7 @@ do
     sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
     sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
     if [ -n "$sNam" ] && [ -n "$sVer" ]
-    then sNVR="${sNam}*-${sVer}*-${sRel}"
+    then sNVR="${sNam}*-${sVer}*-${sRel}*"
     else sNVR="$p"
     fi
     uIco=N
@@ -364,17 +365,17 @@ do
         fi
       fi
     fi
-    if diff -q "$i" "SOURCES/${i##*/}" > /dev/null 2>&1  # Is exactly this file already there?
+    if ! diff -q "$i" "SOURCES/${i##*/}" > /dev/null 2>&1  # Is exactly this file already there?
     then
       if [ "$NoMove" = Y ]
       then cp -sf "$i" SOURCES/
       else mv -f "$i" SOURCES/
       fi
     fi
-    case "$(find -L RPMS -maxdepth 2 -name "${sNVR}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
+    case "$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
-      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
       printf '\n\n' >> "$LogFile"
       if rpmbuild -v -ba "$t/$o" >> "$LogFile" 2>&1
       then
@@ -388,7 +389,7 @@ do
       ;;
     0_*)
       printf '%s ' "Building RPM(s) (because the SRPM already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
       printf '\n\n' >> "$LogFile"
       if rpmbuild -v -bb "$t/$o" >> "$LogFile" 2>&1
       then
@@ -402,7 +403,7 @@ do
       ;;
     *_0)
       printf '%s ' "Building SRPM (because an RPM for it already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s ' "$i" | tee -a "$LogFile"
+      printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
       printf '\n\n' >> "$LogFile"
       if rpmbuild -v -bs "$t/$o" >> "$LogFile" 2>&1
       then
