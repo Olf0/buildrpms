@@ -5,15 +5,14 @@ set -u  # "-u" (error when using uninitialised variables).
 # Omitted "-e" for now, because this script better runs through,
 # despite minor errors.
 set -o pipefail  # May not be supported, busybox's ash and bash do.
-# Using bash (formally) because it is "always there" on SailfishOS: Either the
-# real bash 3.2.57 (the last GPLv2 version) on SailfishOS less than v4 or via
-# busybox's bash-symlink (which is deployed by the busybox-symlinks-bash RPM)
-# since SailfishOS 4.  Note that busybox's ash support "-o pipefail", but not
-# "-o posix"; setting POSIXLY_CORRECT seems to achive the same without
-# compatibility issues, plus (when exported) also for a number of other GNU
-# utilities.
-# Nevertheless, this script is still a Bourne (not-"Again") Shell script and
-# shall stay free of bashisms.
+# Use bash (formally) because it is usually "always there" (e.g., on
+# SailfishOS): Either the real bash or via busybox's bash-symlink (which is
+# deployed by the busybox-symlinks-bash package).  Note that busybox's ash
+# supports "-o pipefail", but not "-o posix"; setting POSIXLY_CORRECT seems to
+# achive the same without compatibility issues, plus (when exported) also for a
+# number of other GNU utilities.
+# Nevertheless, this script is still a POSIX-compatible Bourne (not-"Again")
+# Shell script and shall stay free of bashisms.
 export LC_ALL=POSIX  # For details see https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_02
 export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/Olf0/sfos-upgrade/issues/73
                           # Ultimately this ensures an almost consistent behaviour across shell implementations.
@@ -24,11 +23,12 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 #        1         2         3         4         5         6         7         8
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 
-# `buildrpms` takes a list of tar archive paths (including simple file names,
-# absolute, relative paths and homedir expansion by a leading tilde "~") with
-# each list item (i.e., archive path) as a single argument.  Provided paths
-# may point to files or directories; if a directory is addressed, the whole
-# directory tree below this directory is searched for valid archive files.
+# `buildrpms` takes a list of paths to tar archives (including simple file
+# names, absolute, relative paths and homedir expansion by a leading tilde "~")
+# with each list item (i.e., archive path) as a single argument.  Provided
+# paths may point to files or directories; if a directory is addressed, the
+# whole directory tree below this directory is searched for valid archive
+# files.
 #
 # If an archive path contains no slashes (/), it is used as a simple archive
 # file name; still the wildcard rules denoted below apply.  This name is used
@@ -43,9 +43,9 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 # this order of precedence).
 #
 # The archive paths may either contain shell type wildcard characters
-# (? * [ ]), or be truncated (i.e., provide only a path without wildcards,
-# including or comprising the beginning of a archive file name or a complete
-# such name).
+# (? * [ ]), or be truncated (i.e., provide only a path without unquoted
+# wildcard characters, including or comprising the beginning of a archive file
+# name or a complete such name).
 # File paths ending in a slash are the only exception: They may contain
 # wildcard characters, even though the whole directory tree below the provided
 # path is searched for valid archive files.
