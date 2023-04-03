@@ -1,7 +1,25 @@
-#!/bin/sh
-set -uC  # Add -e later
+#!/bin/bash
+set -u  # "-u" (error when using uninitialised variables).
+# Must not use "-f" (disable pathname expansion) and
+# "-C" (no-clobber / -overwrite) in this script.
+# Omitted "-e" for now, because this script better runs through,
+# despite minor errors.
+set -o pipefail  # May not be supported, busybox's ash and bash do.
+# Using bash (formally) because it is "always there" on SailfishOS: Either the
+# real bash 3.2.57 (the last GPLv2 version) on SailfishOS less than v4 or via
+# busybox's bash-symlink (which is deployed by the busybox-symlinks-bash RPM)
+# since SailfishOS 4.  Note that busybox's ash support "-o pipefail", but not
+# "-o posix"; setting POSIXLY_CORRECT seems to achive the same without
+# compatibility issues, plus (when exported) also for a number of other GNU
+# utilities.
+# Nevertheless, this script is still a Bourne (not-"Again") Shell script and
+# shall stay free of bashisms.
 export LC_ALL=POSIX  # For details see https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_02
-export POSIXLY_CORRECT=1  # Necessary for a sane `df` output etc., see e.g., https://github.com/Olf0/sfos-upgrade/issues/73
+export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/Olf0/sfos-upgrade/issues/73
+                          # Ultimately this ensures an almost consistent behaviour across shell implementations.
+
+# Usage
+# See detailed description below.
 
 #        1         2         3         4         5         6         7         8
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
