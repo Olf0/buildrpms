@@ -341,9 +341,9 @@ do
     fi
     uIco=N
     if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
-    then :  # Icon tag with path detected
-    elif sIco="$(printf %s "$sPre" | grep '^#Icon:' | head -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
-    then  # Icon tag to uncomment with path detected; mind that the first such tag is uncommented!
+    then :  # Icon tag with path detected, fetch the path of the last hit
+    elif sIco="$(printf %s "$sPre" | grep -m 1 '^#Icon:' | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
+    then  # Icon tag to uncomment with path detected; mind that only the first such tag is uncommented!
       uIco=Y
     fi
     if [ -n "$sIco" ]
@@ -355,12 +355,15 @@ do
         else printf '%s' ", though notice that icon file referenced in spec file $o exists at SOURCES/${sIco}, but is not usable" | tee -a "$LogFile" >&2
         fi
       else
-        if tIco="$(tar -tf "${t}.lnk" | fgrep "$sIco")"
+        if tIco="$(tar -tf "${t}.lnk" | fgrep "$sIco")"  # May have multiple hits
         then
           cd "$t"
-          tar -xof "${t}.lnk" "$tIco"
+          tar -xof "${t}.lnk" $tIco
+          cd "$MyPWD"/SOURCES
+          for h in $tIco
+          do cp -sf "$t/$h" ./
+          done
           cd "$MyPWD"
-          cp -sf "$(find "$t" -type f \! -executable \! -empty -perm /444 -name "$sIco" -print)" SOURCES/
           [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t/$o"
         else printf '%s' ", though notice that icon file $sIco is referenced in spec file ${o}, but not found in archive $i" | tee -a "$LogFile" >&2
         fi
@@ -368,18 +371,21 @@ do
     fi
     if ! diff -q "$i" "SOURCES/${i##*/}" > /dev/null 2>&1  # Is exactly this file already there?
     then
+      cd "$MyPWD"/SOURCES
       if [ "$NoMove" = Y ]
-      then cp -sf "$i" SOURCES/
-      else mv -f "$i" SOURCES/
+      then cp -sf "$i" ./
+      else mv -f "$i" ./
       fi
+      cd "$MyPWD"
     fi
     if [ -n "$v" ]  # Path to .rpmlintrc file exists
     then
       cd "$t"
       if tar -xof "${t}.lnk" "$v"
       then 
+        cd "$MyPWD"/SOURCES
+        cp -sf "$t/$v" ./
         cd "$MyPWD"
-        cp -sf "$t/$v" SOURCES/
       else
         cd "$MyPWD"
         printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$v"
@@ -437,7 +443,9 @@ do
       printf '%s %s\n' "$i" "skipped!" | tee -a "$LogFile"
       ;;
     esac
-    rm -f "SOURCES/$v"
+    cd SOURCES/
+    rm -f "${v##*/}" $tIco
+    cd "$MyPWD"
   fi
 done
 # rm -rf "$TmpDir"
