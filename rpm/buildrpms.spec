@@ -1,6 +1,6 @@
 Name:           buildrpms
 Summary:        Script for building RPM packages from tar archives
-# The Git release tag format must adhere to just <version> since version 3.6.0.
+# The Git release tag format shall adhere to just <version>.
 # The <version> field adheres to semantic versioning and the <release> field 
 # is comprised of {alpha,beta,rc,release} postfixed with a natural number
 # greater or equal to 1 (e.g., "beta3") and may additonally be postfixed with a
@@ -12,8 +12,8 @@ Summary:        Script for building RPM packages from tar archives
 # and OBS, when configured accordingly; mind the sorting (`adud` < `alpha`).
 # For details and reasons, see
 # https://github.com/Olf0/sfos-upgrade/wiki/Git-tag-format
-Version:        0.7.2
-Release:        beta1
+Version:        0.7.3
+Release:        beta2
 Group:          Applications/System
 Distribution:   SailfishOS
 License:        LGPL-2.1-only
@@ -82,5 +82,5 @@ cp bin/* %{buildroot}%{_bindir}/
 
 # Changelog format: https://lists.fedoraproject.org/archives/list/devel@lists.fedoraproject.org/thread/SF4VVE4NBEDQJDJZ4DJ6YW2DTGMWP23E/#6O6DFC6GDOLCU7QC3QJKJ3VCUGAOTD24
 %changelog
-* Thu Sep  9 1999 olf <Olf0@users.noreply.github.com> - 99.99.99-99
+* Thu Sep  9 1999 olf <Olf0@users.noreply.github.com> - 99.99.99
 - See https://github.com/Olf0/buildrpms/releases
