@@ -209,8 +209,8 @@ list ( )
 
 # Translating arguments into a list of expanded paths
 if [ $# = 0 ]
-then list crypto-sdcard mount-sdcard sfos-upgrade
-# then List="$(list crypto-sdcard mount-sdcard sfos-upgrade)"
+then list crypto-sdcard mount-sdcard sfos-upgrade buildrpms
+# then List="$(list crypto-sdcard mount-sdcard sfos-upgrade buildrpms)"
 else list "$@"
 # else Paths="$(list "$@")"
 fi
@@ -314,7 +314,8 @@ do
       printf '%s\n' "[Notice] Skipping archive \"${i}\", because no spec file found in it." | tee -a "$LogFile" >&2
       continue
     fi
-    v="$(printf '%s' "$m" | grep -m 1 '\.rpmlintrc$')"
+    v="$(printf '%s' "$m" | grep -m 1 '\.rpmlintrc$')"  # The path to the rpmlintrc file within the archive
+    w="${v##*/}"  # The simple name of the rpmlintrc file
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
     then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
@@ -384,11 +385,11 @@ do
       if tar -xof "${t}.lnk" "$v"
       then 
         cd "$MyPWD"/SOURCES
-        cp -sf "$t/$v" ./
+        cp -sf "$t/$v" "$w"
         cd "$MyPWD"
       else
         cd "$MyPWD"
-        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$v"
+        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$o"
       fi
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
@@ -444,7 +445,7 @@ do
       ;;
     esac
     cd SOURCES/
-    rm -f "${v##*/}" $tIco
+    rm -f "$w" $tIco
     cd "$MyPWD"
   fi
 done
