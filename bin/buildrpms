@@ -344,7 +344,20 @@ do
     then sNVR="${sNam}*-${sVer}*-${sRel}*"
     else sNVR="$p"
     fi
-    uIco=N
+    if [ -n "$v" ]  # Path to .rpmlintrc file exists
+    then
+      cd "$t"
+      if tar -xof "${t}.lnk" "$v"
+      then 
+        cd "$MyPWD"/SOURCES
+        cp -sf "$t/$v" "$w"
+        cd "$MyPWD"
+      else
+        cd "$MyPWD"
+        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$o"
+      fi
+    fi
+    uIco=N  # RPM's "Icon:" tag handling
     if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
     then :  # Icon tag with path detected, fetch the path of the last hit
     elif sIco="$(printf %s "$sPre" | grep -m 1 '^#Icon:' | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
@@ -388,19 +401,6 @@ do
       rm -f $Xrpm $Srpm
       Xrpm=""
       Srpm=""
-    fi
-    if [ -n "$v" ]  # Path to .rpmlintrc file exists
-    then
-      cd "$t"
-      if tar -xof "${t}.lnk" "$v"
-      then 
-        cd "$MyPWD"/SOURCES
-        cp -sf "$t/$v" "$w"
-        cd "$MyPWD"
-      else
-        cd "$MyPWD"
-        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$o"
-      fi
     fi
     case "$(printf '%s' "$Xrpm" | wc -w)_$(printf '%s' "$Srpm" | wc -w)" in
     0_0)
