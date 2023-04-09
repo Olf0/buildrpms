@@ -127,6 +127,7 @@ then
     ;;
   -d|--debug)
     Debug=Y
+    shift
     ;;
   -\?|--help)
     printf '%s\n' "Help text for $called is not yet written."
