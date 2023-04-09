@@ -255,7 +255,7 @@ do
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
     then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
-    case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -l)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -l)" in
+    case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -w)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -w)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
       printf '%s ' "$i" | tee -a "$LogFile"
@@ -387,6 +387,8 @@ do
       fi
       cd "$MyPWD"
       rm -f $Xrpm $Srpm
+      Xrpm=""
+      Srpm=""
     fi
     if [ -n "$v" ]  # Path to .rpmlintrc file exists
     then
@@ -401,7 +403,7 @@ do
         printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$o"
       fi
     fi
-    case "$(printf '%s' "$Xrpm" | wc -l)_$(printf '%s' "$Srpm" | wc -l)" in
+    case "$(printf '%s' "$Xrpm" | wc -w)_$(printf '%s' "$Srpm" | wc -w)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
       printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
@@ -415,6 +417,7 @@ do
         printf '\n' >> "$LogFile"
         printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
+      printf '\n' >> "$LogFile"
       ;;
     0_*)
       printf '%s ' "Building RPM(s) (because the SRPM already exists) from archive" | tee -a "$LogFile" >&2
@@ -429,6 +432,7 @@ do
         printf '\n' >> "$LogFile"
         printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
+      printf '\n' >> "$LogFile"
       ;;
     *_0)
       printf '%s ' "Building SRPM (because an RPM for it already exists) from archive" | tee -a "$LogFile" >&2
@@ -443,14 +447,17 @@ do
         printf '\n' >> "$LogFile"
         printf '%s\n' "failed!" | tee -a "$LogFile"
       fi
+      printf '\n' >> "$LogFile"
       ;;
     *_*)
       printf '%s ' "Building (because the SRPM & an RPM already exist) from archive" | tee -a "$LogFile" >&2
       printf '%s %s\n' "$i" "skipped!" | tee -a "$LogFile"
+      printf '\n' >> "$LogFile"
       ;;
     *)
       printf '%s ' "[Notice] Something went wrong when determining what to build (RPM and/or SRPM) from archive" | tee -a "$LogFile" >&2
       printf '%s %s\n' "$i" "skipped!" | tee -a "$LogFile"
+      printf '\n' >> "$LogFile"
       ;;
     esac
     cd SOURCES/
