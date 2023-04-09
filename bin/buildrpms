@@ -57,6 +57,10 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 # Mind to protect wildcards, the tilde and other special characters from being
 # expanded by a shell, if `buildrpms` is intended to interpret them.
 #
+# Also mind, that `buildrpms` lastly calls `rpmbuild`, which expects archive
+# file names to conform to "<name>-<version>.<file name extension>", unless the
+# option "-i|--in-place" is specified.
+#
 # `buildrpms` currently recognises the mutually exclusive options "-?|--help",
 # "-i|--in-place", "-n|--no-move" and "-d|--debug".  By default `buildrpms`
 # extracts the spec file of each archive found, processes it and moves each
