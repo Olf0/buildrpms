@@ -37,6 +37,11 @@ archive paths.
 Mind to protect wildcards, the tilde and other special characters from being
 expanded by a shell, if `buildrpms` is intended to interpret them.
 
+Also mind, that `buildrpms` lastly calls `rpmbuild`, which expects the real
+archive file names to conform to "\<name\>-\<version\>.\<file name extension\>" (i.e.,
+the ones on mass-storage), unless `buildrpms`' option "-i|--in-place" is
+specified.
+
 `buildrpms` currently recognises the mutually exclusive options "-?|--help",
 "-i|--in-place", "-n|--no-move" and "-d|--debug".  By default `buildrpms`
 extracts the spec file of each archive found, processes it and moves each
@@ -51,7 +56,7 @@ archive paths.
 ultimately `rpmbuild` is called after a multitude of checks.  All user
 oriented messages are directed to StdERR, except for the aforementioned
 archive paths and the help output.  The option "-d|--debug" provides some
-additional output to StdERR when processing the input list.
+additional output to StdERR when processing the argument list.
 
 Exit codes:<br />
   0  Everything worked fine: all applicable checks, all applicable preparatory steps, and the rpmbuild run(s)<br />
