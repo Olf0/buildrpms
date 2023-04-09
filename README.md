@@ -38,9 +38,8 @@ Mind to protect wildcards, the tilde and other special characters from being
 expanded by a shell, if `buildrpms` is intended to interpret them.
 
 Also mind, that `buildrpms` lastly calls `rpmbuild`, which expects the real
-archive file names to conform to "\<name\>-\<version\>.\<file name extension\>" (i.e.,
-the ones on mass-storage), unless `buildrpms`' option "-i|--in-place" is
-specified.
+archive file names to conform to "\<name\>-\<version\>.tar.gz" (i.e., the ones on
+mass-storage), unless `buildrpms`' option "-i|--in-place" is specified.
 
 `buildrpms` currently recognises the mutually exclusive options "-?|--help",
 "-i|--in-place", "-n|--no-move" and "-d|--debug".  By default `buildrpms`
