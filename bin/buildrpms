@@ -184,7 +184,6 @@ list ( )
       else k="${o%/*}"
       fi
       m="${o#"$k"/}"
-      # Intro comment needs to be reworked to conform to:
       if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable -size +64c -perm /444 -path "$k/$m" -print 2> /dev/null)")"
