@@ -203,11 +203,12 @@ list ( )
       fi
     fi
   done
-  List="$(printf '%s\n' "$List" | fgrep -vx '' | sort -r)"  # Fix-up of slightly malconstructed List, see comments above.  Observation: `printf` seems to always swallow an extant, trailing newline character, which can be re-added by appending '\n' to the format string, and command substitution via "$()" deletes _all_ trailing newline characters!
+  List="$(printf '%s\n' "$List" | fgrep -vx '' | sed 's/^(.*)\/([^/]*)$/\2\/\1/' | sort -rt '-' -k 1,1 -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 | sed 's/^([^/]*)\/(.*)$/\2\/\1/')"  # Fix-up of slightly malconstructed List, see comments above; sort result with filename as primary criterion.
   [ $Debug = Y ] && printf '%s\n%s\n' "[Debug] Complete list of expanded archive paths, before down-selecting them:" "$List" | tee -a "$LogFile" >&2
   return 0
 }
 
+# Observation: `printf` seems to always swallow an extant, trailing newline character, which can be re-added by appending '\n' to the format string, and command substitution via "$()" deletes _all_ trailing newline characters!
 
 ### Main script
 
