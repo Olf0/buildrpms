@@ -203,7 +203,7 @@ list ( )
       fi
     fi
   done
-  List="$(printf '%s\n' "$List" | fgrep -vx '' | sed 's/^(.*)\/([^/]*)$/\2\/\1/' | sort -rt '-' -k 1,1 -k 2,2 -k 3,3 -k 4,4 -k 5,5 -k 6,6 | sed 's/^([^/]*)\/(.*)$/\2\/\1/')"  # Fix-up of slightly malconstructed List, see comments above; sort result with filename as primary criterion.
+  List="$(printf '%s\n' "$List" | fgrep -vx '' | sed 's|^\(.*\)/\([^/]*\)$|\2/\1|' | sort | sed 's|^\([^/]*\)/\(.*\)$|\2/\1|')"  # Fix-up of slightly malconstructed List, see comments above; sort result with filename as primary criterion.
   [ $Debug = Y ] && printf '%s\n%s\n' "[Debug] Complete list of expanded archive paths, before down-selecting them:" "$List" | tee -a "$LogFile" >&2
   return 0
 }
@@ -215,9 +215,7 @@ list ( )
 # Translating arguments into a list of expanded paths
 if [ $# = 0 ]
 then list crypto-sdcard mount-sdcard sfos-upgrade buildrpms
-# then List="$(list crypto-sdcard mount-sdcard sfos-upgrade buildrpms)"
 else list "$@"
-# else Paths="$(list "$@")"
 fi
 
 if [ -z "$List" ]
@@ -234,13 +232,24 @@ else
   TmpDir="$(mktemp -dt "${Called}.XXX")"  # equivalent to `mktemp -dp "/tmp" "${Called}.XXX"`
   printf '%s\n' "[Info] Extracting and processing spec file from:" | tee -a "$LogFile" >&2
 fi
-k=0
+k=1
 kMax="$(printf '%s\n' "$List" | wc -l)"
-while [ $k -lt $kMax ]
+j=""
+nextI="$(printf '%s' "$List" | head -1)"  # Pick first entry
+nextJ="${nextI##*/}"  # Equivalent to "$(basename "$nextI")"
+while [ $k -le $kMax ]
 do
-  k=$((k+1))
-  i="$(printf '%s' "$List" | sed -n "${k}P")"  # Pick k-th entry
+  i="$nextI"
   j="${i##*/}"  # Equivalent to "$(basename "$i")"
+  k=$((k+1))
+  if [ $k -le $kMax ]
+  then
+    nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick k-th entry
+    nextJ="${nextI##*/}"  # Equivalent to "$(basename "$nextI")"
+  else
+    nextI=""
+    nextJ=""
+  fi
   if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
