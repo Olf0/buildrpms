@@ -253,8 +253,10 @@ do
   printf '%s. ' "$k" | tee -a "$LogFile" >&2
   if [ "$j" = "$nextJ" ]
   then
-    if diff -q "$j" "$nextJ" > /dev/null 2>&1  # Is it exactly the same file?
-    then continue
+    if diff -q "$i" "$nextI" > /dev/null 2>&1  # Is it exactly the same file?
+    then
+      printf '%s\n' "Archives $i and $nextI are identical, thus skipping ${i}." | tee -a "$LogFile" >&2
+      continue
     fi
   fi
   if [ "$InPlace" = Y ]
