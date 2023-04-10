@@ -251,12 +251,15 @@ do
   then continue
   fi
   printf '%s. ' "$k" | tee -a "$LogFile" >&2
+  SameNameButDiffers=N
   if [ "$j" = "$nextJ" ]
   then
     if diff -q "$i" "$nextI" > /dev/null 2>&1  # Is it exactly the same file?
     then
       printf '%s\n' "Archives $i and $nextI are identical, thus skipping ${i}." | tee -a "$LogFile" >&2
       continue
+    else
+      SameNameButDiffers=Y
     fi
   fi
   if [ "$InPlace" = Y ]
@@ -402,15 +405,15 @@ do
     fi
     Xrpm="$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print)"  # May be a list
     Srpm="$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print)"  # May be a list
-    if ! diff -q "$i" "SOURCES/${i##*/}" > /dev/null 2>&1  # Is exactly this file already there?
+    if [ "$i" = "SOURCES/$j" ] && ! diff -q "$i" "SOURCES/$j" > /dev/null 2>&1  # Is exactly this file already there?
     then
       cd "$MyPWD"/SOURCES
-      if [ "$NoMove" = Y ]
+      if [ $NoMove = Y ] || [ $SameNameButDiffers = Y ]
       then cp -sf "$i" ./
       else mv -f "$i" ./
       fi
       cd "$MyPWD"
-      rm -f $Xrpm $Srpm
+      # [ $SameNameButDiffers = N ] && rm -f $Xrpm $Srpm  # `rpmbuild` overwrites any way. 
       Xrpm=""
       Srpm=""
     fi
