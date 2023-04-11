@@ -194,22 +194,22 @@ while [ $k -le $kMax ]
 do
   i="$nextI"
   j="${i##*/}"  # Equivalent to "$(basename "$i")"
-  k=$((k+1))
-  nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick (k+1)-th entry, empty if beyond range
-  nextJ="${nextI##*/}"  # Equivalent to `basename`
   if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
   if ! m="$(tar -tf "$i" 2> /dev/null)"
   then continue
   fi
+  [ "$InPlace" != Y ] && printf '\n' >> "$LogFile"
   printf '%s. ' "$k" | tee -a "$LogFile" >&2
+  k=$((k+1))
+  nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick (k+1)-th entry, empty if beyond range
+  nextJ="${nextI##*/}"  # Equivalent to `basename`
   SameNameButDiffers=N
   if [ "$j" = "$nextJ" ]
   then
     if diff -q "$i" "$nextI" > /dev/null 2>&1  # Is it exactly the same file?
     then
-      [ "$InPlace" != Y ] && printf '\n' >> "$LogFile"
       printf '%s\n' "Archives $i and $nextI are identical, thus skipping $i" | tee -a "$LogFile" >&2
       continue
     else
@@ -371,7 +371,6 @@ do
       Xrpm=""
       Srpm=""
     fi
-    printf '\n' >> "$LogFile"
     case "$(printf '%s' "$Xrpm" | wc -w)_$(printf '%s' "$Srpm" | wc -w)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
