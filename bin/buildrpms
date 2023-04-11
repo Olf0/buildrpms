@@ -18,15 +18,17 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 # My stronger, but usual requirements for %{name}-%{version} strings were "[[:alnum:]][-[:alnum:].+_~^]*-[[:digit:]][[:alnum:].+_~^]*" plus for "-%{release}" strings "-[[:alnum:]][[:alnum:].+_~^]*" in versions < 0.7.
 # 
 # Observations:
-# - `printf` always deletes an extant, trailing newline character, which can be re-added by appending '\n' to the format string.
-# - Command substitution via "$()" deletes _all_ trailing newline characters!
+# - `printf` always deletes all extant, trailing newline characters, which can be re-added by appending '\n' to the format string.
+# - Command substitution via "$()" also deletes all trailing newline characters!
+# - `readlink` and `realpath` strip all trailing slashes (/).
+# - `realpaths`'s option "-L" is weird, see detailed description on info page or web-page.
 
 
 ### Preamble
 
 MyPWD="$(pwd -P)"  # … is superior to "$PWD", and POSIX's default option is "-L".
 
-Called="$(basename "$0")"
+Called="${0##*/}"
 if printf '%s' " $(id -un) $(id -Gn) " | fgrep -q ' root '
 then
   printf '%s\n' "[Error] $Called shall not be started with root privileges: aborting!" >&2
@@ -122,7 +124,7 @@ list ( )
       elif [ -z "${k%%~*}" ]  # First path element starts with a "~"
       then                     # May allow for code-exec via embedded metacharacters (reserved characters) "| & ; ( ) newline"
         k="$(eval echo "$k")"  # or control operators (as token / word) "|| & && ; ;; ;& ;;& ( ) | |& <newline>".
-        m="${i#*/}"
+        m="${i#*/}"            # But does resolve foreign homedirs, not only the own one accessible via $HOME
       elif [ "$k" = "." ]
       then
         k="$MyPWD"
@@ -137,11 +139,16 @@ list ( )
       else k="${o%/*}"
       fi
       m="${o#"$k"/}"
+      if ! k="$(readlink -enqs "${k:-/}")"  # `realpath -ePq` is equivalent and "preferred", but not installed on SFOS 3.2.1 
+      then  # Static path without wildcards does not exist!
+        printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
+        continue
+      fi
       if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
-        List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable -size +64c -perm /444 -path "$k/$m" -print 2> /dev/null)")"
+        List="$List$(printf '\n%s' "$(find -L "$k" -type f \! -executable -size +64c -perm /444 -path "$k/$m" -print 2> /dev/null)")"
       else
-        List="$List$(printf '\n%s' "$(find -L "${k:-/}" -type f \! -executable -size +64c -perm /444 -path "$k/${m}*" -print 2> /dev/null)")"
+        List="$List$(printf '\n%s' "$(find -L "$k" -type f \! -executable -size +64c -perm /444 -path "$k/${m}*" -print 2> /dev/null)")"
       fi
     else # Search for FileTargets
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
