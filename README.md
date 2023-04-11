@@ -12,10 +12,11 @@ files.
 
 If an archive path contains no slashes (/), it is used as a simple archive
 file name; still the wildcard rules denoted below apply.  This name is used
-to search for valid archive files in a list of directories containing "." and
+to search for valid archive files in a list of directories comprising "." and
 "~/Downloads"; for each of these directories the whole directory tree below
 is searched.  The only exception are directories named "SOURCES", if the
-option "-i|--in-place" is used.
+option "-i|--in-place" is used or a simple name contains no digit somewhere
+after the last dash-hyphen (-).
 
 Without the option "-i|--in-place", `buildrpms` avoids re-building archives
 for which an (S)RPM in the directories ./RPMS or ./SRPMS exists by analysing
