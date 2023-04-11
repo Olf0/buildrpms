@@ -56,17 +56,17 @@ then
     ;;
   -\?|--help)
     if command -v tput > /dev/null 2>&1
-    then Cols=$(($(tput cols)-1))
+    then Cols=$(tput cols)
     elif command -v stty > /dev/null 2>&1
     then
       Size="$(stty size)"
-      Cols=$(("${Size##* }"-1))
-    else Cols=79
+      Cols="${Size##* }"
+    else Cols=80
     fi  # Alternatives to `fmt -suw X` are `fold -sw X` and simply `cat` (plus maybe `wrap`)
     if command -v fmt > /dev/null 2>&1
-    then Cmd="fmt -suw $Cols"
+    then Cmd="fmt -suw $Cols -g $Cols"
     elif command -v fold > /dev/null 2>&1
-    then Cmd="fold -sw $Cols"
+    then Cmd="fold -sw $((${Cols}-1))"
     else Cmd=cat
     fi  # Could not get `pr -tw X`, `pr -tW X` or `pr --columns=1 -tw X` to work
     eval "$Cmd" <<-"EOF"  
