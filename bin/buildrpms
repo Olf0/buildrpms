@@ -24,7 +24,7 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 
 ### Preamble
 
-MyPWD="$PWD"
+MyPWD="$(pwd -P)"  # … is superior to "$PWD", and POSIX's default option is "-L".
 
 Called="$(basename "$0")"
 if printf '%s' " $(id -un) $(id -Gn) " | fgrep -q ' root '
