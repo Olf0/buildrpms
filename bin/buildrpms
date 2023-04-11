@@ -194,7 +194,7 @@ list ( )
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
       DDirs='~/Downloads ~/android_storage/Download'
       DDirs="$(eval echo "$DDirs")"  # Path expansion, here: tilde
-      if [ "$InPlace" = Y ] || ! printf %s "${i##*-}" | grep -q '^[0-9]'
+      if [ "$InPlace" = Y ] || ! printf %s "$i" | rev | cut -s -d '-' -f 1 | rev | grep -q '[0-9]'
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable -size +64c -perm /444 -name "${i}*" -print 2> /dev/null)")"
         List="$List$(printf '\n%s' "$(find -L "$MyPWD" -path '*SOURCES' -prune -o -type f \! -executable -size +64c -perm /444 -name "${i}*" -print 2> /dev/null)")"
@@ -203,20 +203,19 @@ list ( )
       fi
     fi
   done
-  List="$(printf '%s\n' "$List" | fgrep -vx '' | sort -r)"  # Fix-up of slightly malconstructed List, see comments above.  Observation: `printf` seems to always swallow an extant, trailing newline character, which can be re-added by appending '\n' to the format string, and command substitution via "$()" deletes _all_ trailing newline characters!
+  List="$(printf '%s\n' "$List" | fgrep -vx '' | sed 's|^\(.*\)/\([^/]*\)$|\2/\1|' | sort | sed 's|^\([^/]*\)/\(.*\)$|\2/\1|')"  # Fix-up of slightly malconstructed List, see comments above; sort result with filename as primary criterion.
   [ $Debug = Y ] && printf '%s\n%s\n' "[Debug] Complete list of expanded archive paths, before down-selecting them:" "$List" | tee -a "$LogFile" >&2
   return 0
 }
 
+# Observation: `printf` seems to always swallow an extant, trailing newline character, which can be re-added by appending '\n' to the format string, and command substitution via "$()" deletes _all_ trailing newline characters!
 
 ### Main script
 
 # Translating arguments into a list of expanded paths
 if [ $# = 0 ]
 then list crypto-sdcard mount-sdcard sfos-upgrade buildrpms
-# then List="$(list crypto-sdcard mount-sdcard sfos-upgrade buildrpms)"
 else list "$@"
-# else Paths="$(list "$@")"
 fi
 
 if [ -z "$List" ]
@@ -233,13 +232,18 @@ else
   TmpDir="$(mktemp -dt "${Called}.XXX")"  # equivalent to `mktemp -dp "/tmp" "${Called}.XXX"`
   printf '%s\n' "[Info] Extracting and processing spec file from:" | tee -a "$LogFile" >&2
 fi
-k=0
+k=1
 kMax="$(printf '%s\n' "$List" | wc -l)"
-while [ $k -lt $kMax ]
+j=""
+nextI="$(printf '%s' "$List" | head -1)"  # Pick first entry
+nextJ="${nextI##*/}"  # Equivalent to "$(basename "$nextI")"
+while [ $k -le $kMax ]
 do
-  k=$((k+1))
-  i="$(printf '%s' "$List" | sed -n "${k}P")"  # Pick k-th entry
+  i="$nextI"
   j="${i##*/}"  # Equivalent to "$(basename "$i")"
+  k=$((k+1))
+  nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick (k+1)-th entry, empty if beyond range
+  nextJ="${nextI##*/}"  # Equivalent to `basename`
   if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
@@ -247,6 +251,17 @@ do
   then continue
   fi
   printf '%s. ' "$k" | tee -a "$LogFile" >&2
+  SameNameButDiffers=N
+  if [ "$j" = "$nextJ" ]
+  then
+    if diff -q "$i" "$nextI" > /dev/null 2>&1  # Is it exactly the same file?
+    then
+      printf '%s\n' "Archives $i and $nextI are identical, thus skipping ${i}." | tee -a "$LogFile" >&2
+      continue
+    else
+      SameNameButDiffers=Y
+    fi
+  fi
   if [ "$InPlace" = Y ]
   then
     o="$(printf '%s' "$m" | head -1)"  # E.g., "xz-5.0.4/", note the trailing slash
@@ -390,15 +405,15 @@ do
     fi
     Xrpm="$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print)"  # May be a list
     Srpm="$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print)"  # May be a list
-    if ! diff -q "$i" "SOURCES/${i##*/}" > /dev/null 2>&1  # Is exactly this file already there?
+    if [ "$i" = "SOURCES/$j" ] && ! diff -q "$i" "SOURCES/$j" > /dev/null 2>&1  # Is exactly this file already there?
     then
       cd "$MyPWD"/SOURCES
-      if [ "$NoMove" = Y ]
+      if [ $NoMove = Y ] || [ $SameNameButDiffers = Y ]
       then cp -sf "$i" ./
       else mv -f "$i" ./
       fi
       cd "$MyPWD"
-      rm -f $Xrpm $Srpm
+      # [ $SameNameButDiffers = N ] && rm -f $Xrpm $Srpm  # `rpmbuild` overwrites any way. 
       Xrpm=""
       Srpm=""
     fi
