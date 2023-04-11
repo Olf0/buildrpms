@@ -347,9 +347,9 @@ do
     fi
     mkdir -p SOURCES
     sPre="$(sed -n '1,\_^[[:blank:]]*%prep$_P' "$t/$o" | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*$_P' | sed -n '1,\_^[[:blank:]]*%prep[[:blank:]]*#_P')"
-    sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][-+.[:alnum:]_~^]*')"
-    sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
-    sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
+    sNam="$(printf %s "$sPre" | grep '^[[:blank:]]*Name[[:blank:]]*:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][-+.[:alnum:]_~^]*')"
+    sVer="$(printf %s "$sPre" | grep '^[[:blank:]]*Version[[:blank:]]*:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
+    sRel="$(printf %s "$sPre" | grep '^[[:blank:]]*Release[[:blank:]]*:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -o '^[[:alnum:]][+.[:alnum:]_~^]*')"
     if [ -n "$sNam" ] && [ -n "$sVer" ]
     then sNVR="${sNam}*-${sVer}*-${sRel}*"
     else sNVR="$p"
@@ -368,7 +368,7 @@ do
       fi
     fi
     uIco=N  # RPM's "Icon:" tag handling
-    if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
+    if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon[[:blank:]]*:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
     then :  # Icon tag with path detected, fetch the path of the last hit
     elif sIco="$(printf %s "$sPre" | grep -m 1 '^#Icon:' | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
     then  # Icon tag to uncomment with path detected; mind that only the first such tag is uncommented!
