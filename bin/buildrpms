@@ -55,7 +55,21 @@ then
     shift
     ;;
   -\?|--help)
-    fmt -suw 79 <<-"EOF"
+    if command -v tput > /dev/null 2>&1
+    then Cols=$(($(tput cols)-1))
+    elif command -v stty > /dev/null 2>&1
+    then
+      Size="$(stty size)"
+      Cols=$(("${Size##* }"-1))
+    else Cols=79
+    fi  # Alternatives to `fmt -suw X` are `fold -sw X` and simply `cat` (plus maybe `wrap`)
+    if command -v fmt > /dev/null 2>&1
+    then Cmd="fmt -suw $Cols"
+    elif command -v fold > /dev/null 2>&1
+    then Cmd="fold -sw $Cols"
+    else Cmd=cat
+    fi  # Could not get `pr -tw X`, `pr -tW X` or `pr --columns=1 -tw X` to work
+    eval "$Cmd" <<-"EOF"  
 	`buildrpms` takes a list of paths to tar archives (including simple file names, absolute, relative paths and homedir expansion by a leading tilde "~") with each list item (i.e., archive path) as a single argument.  Provided paths may point to files or directories; if a directory is addressed, the whole directory tree below this directory is searched for valid archive files.
 	
 	If an archive path contains no slashes (/), it is used as a simple archive file name; still the wildcard rules denoted below apply.  This name is used to search for valid archive files in a list of directories comprising "." and "~/Downloads"; for each of these directories the whole directory tree below is searched.  The only exception are directories named "SOURCES", if the option "-i|--in-place" is used or a simple name contains no digit somewhere after the last dash-hyphen (-).
@@ -139,10 +153,30 @@ list ( )
       else k="${o%/*}"
       fi
       m="${o#"$k"/}"
-      if ! k="$(readlink -enqs "${k:-/}")"  # `realpath -ePq` is equivalent and "preferred", but not installed on SFOS 3.2.1
-      then  # Static path without wildcards does not exist!
-        printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
-        continue
+      if command -v realpath > /dev/null 2>&1
+      then
+        if l="$(realpath -ePq "${k:-/}")"  # `realpath` is "preferred" over `readlink`, but not installed on SFOS 3.2.1
+        then k="$l"
+        else # Static path without wildcards does not exist!
+          printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
+          continue
+        fi
+      elif command -v readlink > /dev/null 2>&1
+      then
+        if l="$(readlink -enqs "${k:-/}")"  # `realpath -ePq` is equivalent and "preferred", but more likely not available.
+        then k="$l"
+        else  # Static path without wildcards does not exist!
+          printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
+          continue
+        fi
+      else
+        if cd -- "${k:-/}" 2> /dev/null  # See https://unix.stackexchange.com/a/24342
+        then k="$(pwd -P 2> /dev/null || pwd)"  # Option "-P" may not exist, but `pwd` is always there.
+        else   # Static path without wildcards does not exist!
+          printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
+          continue
+        fi
+        cd "$MyPWD"
       fi
       if [ -n "$p" ] || [ -n "${o##*/}" ]  # Does contain an unprotected * ? [ ] or does not end in "/"
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
@@ -430,7 +464,7 @@ do
       printf '%s %s\n' "$i" "skipped!" | tee -a "$LogFile"
       ;;
     esac
-    cd SOURCES/
+    cd SOURCES
     rm -f "$w" $tIco
     cd "$MyPWD"
   fi
