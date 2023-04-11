@@ -359,9 +359,9 @@ do
     fi
     Xrpm="$(find -L RPMS -maxdepth 2 -name "${sNVR}.[Rr][Pp][Mm]" -print)"  # May be a list
     Srpm="$(find -L SRPMS -maxdepth 1 -name "${sNVR}.[Ss]*[Rr][Pp][Mm]" -print)"  # May be a list
-    if [ "$i" = "SOURCES/$j" ] && ! diff -q "$i" "SOURCES/$j" > /dev/null 2>&1  # Is exactly this file already there?
+    if [ "$i" != "$MyPWD/SOURCES/$j" ] || [ ! -s "SOURCES/$j" ] || ! diff -q "$i" "SOURCES/$j" > /dev/null 2>&1  # Is exactly this file not already there?
     then
-      cd "$MyPWD"/SOURCES
+      cd SOURCES
       if [ $NoMove = Y ] || [ $SameNameButDiffers = Y ]
       then cp -sf "$i" ./
       else mv -f "$i" ./
