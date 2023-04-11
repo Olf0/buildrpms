@@ -329,7 +329,6 @@ do
       continue
     fi
     v="$(printf '%s' "$m" | grep -m 1 '\.rpmlintrc$')"  # The path to the rpmlintrc file within the archive
-    w="${v##*/}"  # The simple name of the rpmlintrc file
     p="${o%%/*}"
     if [ "$p" = rpm ] || [ "$p" = "$o" ]
     then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
@@ -360,7 +359,7 @@ do
       if tar -xof "${t}.lnk" "$v"
       then
         cd "$MyPWD"/SOURCES
-        cp -sf "$t/$v" "$w"
+        cp -sf "$t/$v" ./
         cd "$MyPWD"
       else
         cd "$MyPWD"
@@ -368,9 +367,9 @@ do
       fi
     fi
     uIco=N  # RPM's "Icon:" tag handling
-    if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon[[:blank:]]*:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
+    if sIco="$(printf %s "$sPre" | grep '^[[:blank:]]*Icon[[:blank:]]*:' | tail -1 | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][-+.[:alnum:]_~^]*\.[GgXx][IiPp][FfMm]')"
     then :  # Icon tag with path detected, fetch the path of the last hit
-    elif sIco="$(printf %s "$sPre" | grep -m 1 '^#Icon:' | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
+    elif sIco="$(printf %s "$sPre" | grep -m 1 '^#Icon:' | cut -s -d ':' -f 2 | cut -d '#' -f 1 | tr -d '[[:blank:]]' | grep -x '[[:alnum:]][-+.[:alnum:]_~^]*.[GgXx][IiPp][FfMm]')"
     then  # Icon tag to uncomment with path detected; mind that only the first such tag is uncommented!
       uIco=Y
     fi
@@ -465,7 +464,7 @@ do
       ;;
     esac
     cd SOURCES
-    rm -f "$w" $tIco
+    rm -f "${v##*/}" $tIco  # The simple name of the rpmlintrc file and all icon file simple names
     cd "$MyPWD"
   fi
 done
