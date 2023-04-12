@@ -228,13 +228,18 @@ else
 fi
 k=1
 kMax="$(printf '%s\n' "$List" | wc -l)"
+i=""
 j=""
 nextI="$(printf '%s' "$List" | head -1)"  # Pick first entry
 nextJ="${nextI##*/}"  # Equivalent to "$(basename "$nextI")"
+SameNameNext=N
+SameNameNextButDiffers=N
 while [ $k -le $kMax ]
 do
+  prevI="$i"
+  prevJ="$j"
   i="$nextI"
-  j="${i##*/}"  # Equivalent to "$(basename "$i")"
+  j="$nextJ"
   if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
@@ -246,15 +251,19 @@ do
   k=$((k+1))
   nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick (k+1)-th entry, empty if beyond range
   nextJ="${nextI##*/}"  # Equivalent to `basename`
-  SameNameButDiffers=N
+  SameNamePrev="$SameNameNext"
+  SameNamePrevButDiffers="$SameNameNextButDiffers"
+  SameNameNext=N
+  SameNameNextButDiffers=N
   if [ "$j" = "$nextJ" ]
   then
+    SameNameNext=Y
     if diff -q "$i" "$nextI" > /dev/null 2>&1  # Is it exactly the same file?
     then
       printf '%s\n' "Archives $i and $nextI are identical, thus skipping $i" | tee -a "$LogFile" >&2
       continue
     else
-      SameNameButDiffers=Y
+      SameNameNextButDiffers=Y
     fi
   fi
   if [ "$InPlace" = Y ]
@@ -402,12 +411,12 @@ do
     if [ "$i" != "$MyPWD/SOURCES/$j" ] || [ ! -s "SOURCES/$j" ] || ! diff -q "$i" "SOURCES/$j" > /dev/null 2>&1  # Is exactly this file not already there?
     then
       cd SOURCES
-      if [ $NoMove = Y ] || [ $SameNameButDiffers = Y ]
+      if [ $NoMove = Y ] || [ $SameNameNextButDiffers = Y ]
       then cp -sf "$i" ./
       else mv -f "$i" ./
       fi
       cd "$MyPWD"
-      # [ $SameNameButDiffers = N ] && rm -f $Xrpm $Srpm  # `rpmbuild` overwrites any way.
+      # [ $SameNameNextButDiffers = N ] && rm -f $Xrpm $Srpm  # `rpmbuild` overwrites any way.
       Xrpm=""
       Srpm=""
     fi
