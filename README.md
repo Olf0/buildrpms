@@ -1,5 +1,5 @@
 # buildrpms
-**Script for building RPM packages from tar archives**<br />
+**Script for building RPM packages from archives**<br />
 <br />
 
 ### Detailed description
