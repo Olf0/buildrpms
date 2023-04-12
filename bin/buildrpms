@@ -466,6 +466,7 @@ do
     cd SOURCES
     rm -f "${v##*/}" $tIco  # The simple name of the rpmlintrc file and all icon file simple names
     cd "$MyPWD"
+    rm -rf "$t"
   fi
 done
 # rm -rf "$TmpDir"
