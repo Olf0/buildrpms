@@ -258,10 +258,10 @@ do
     fi
   fi
   if [ "$InPlace" = Y ]
-  then
+  then  # Get the first entry
     o="$(printf '%s' "$m" | head -1)"  # E.g., "xz-5.0.4/", note the trailing slash
-    p="${o%%/*}"
-    if [ "$p" = rpm ] || [ "$p" = "$o" ]
+    p="${o%%/*}"  # Strip it of the slash (if present) and all subsequent path elements
+    if [ "$p" = rpm ] || [ "$p" = "$o" ]  # If the top level element is "rpm" or did not have a trailing slash (i.e., no sub-elements), then use the archive name stripped of its extension
     then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
     case "$(find -L RPMS -maxdepth 2 -name "${p}*.[Rr][Pp][Mm]" -print | wc -w)_$(find -L SRPMS -maxdepth 1 -name "${p}*.[Ss]*[Rr][Pp][Mm]" -print | wc -w)" in
@@ -328,16 +328,16 @@ do
       printf '%s\n' "[Notice] Skipping archive \"${i}\", because no spec file found in it." | tee -a "$LogFile" >&2
       continue
     fi
-    v="$(printf '%s' "$m" | grep -m 1 '\.rpmlintrc$')"  # The path to the rpmlintrc file within the archive
-    p="${o%%/*}"
-    if [ "$p" = rpm ] || [ "$p" = "$o" ]
+    v="$(printf '%s' "$m" | grep -m 1 '\.rpmlintrc$')"  # The path to the first rpmlintrc file within the archive
+    p="${o%%/*}"  # The top level path element within the archive, usually identical to the archive name without file name extension
+    if [ "$p" = rpm ] || [ "$p" = "$o" ]  # If the top level element is "rpm" or the name of the spec file, then use the archive name stripped of its extension
     then p="$(printf %s "$j" | sed -e 's/\.[Tt][Gg][Zz]$//' -e 's/\.[Pp][Aa][Xx]$//' -e 's/\.[Uu][Ss][Tt][Aa][Rr]$//' -e 's/\.tar[.[:alnum:]]*$//')"
     fi
     t="$TmpDir/$p"
     mkdir "$t"
     ln -s "$i" "${t}.lnk"  # Results in `ln -s <expanded path> "/tmp/buildrpms.XXX/$p.lnk"`
     cd "$t"
-    if tar -xof "${t}.lnk" "$o"
+    if tar -xof "${t}.lnk" "$o"  # Unpack the spec file
     then
       cd "$MyPWD"
     else
@@ -353,17 +353,17 @@ do
     then sNVR="${sNam}*-${sVer}*-${sRel}*"
     else sNVR="$p"
     fi
-    if [ -n "$v" ]  # Path to .rpmlintrc file exists
+    if [ -n "$v" ]  # Path to .rpmlintrc file exists within archive
     then
       cd "$t"
-      if tar -xof "${t}.lnk" "$v"
+      if tar -xof "${t}.lnk" "$v"  # Unpack it
       then
         cd "$MyPWD"/SOURCES
-        cp -sf "$t/$v" ./
+        cp -sf "$t/$v" ./  # Link it in SOURCES
         cd "$MyPWD"
       else
         cd "$MyPWD"
-        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$o"
+        printf %s "$sPre" | grep '^Source[0-9]*:.*\.rpmlintrc' && sed -i 's/\(^Source[0-9]*:.*\.rpmlintrc.*$\)/#\1/' "$t/$o"  # Comment it out
       fi
     fi
     uIco=N  # RPM's "Icon:" tag handling
@@ -386,10 +386,10 @@ do
         if tIco="$(tar -tf "${t}.lnk" | fgrep "$sIco")"  # May have multiple hits
         then
           cd "$t"
-          tar -xof "${t}.lnk" $tIco
+          tar -xof "${t}.lnk" $tIco  # Unpack icon files
           cd "$MyPWD"/SOURCES
           for h in $tIco
-          do cp -sf "$t/$h" ./
+          do cp -sf "$t/$h" ./  # Link them in SOURCES
           done
           cd "$MyPWD"
           [ $uIco = Y ] && sed -i 's/^#Icon:/Icon:/' "$t/$o"
@@ -414,7 +414,7 @@ do
     case "$(printf '%s' "$Xrpm" | wc -w)_$(printf '%s' "$Srpm" | wc -w)" in
     0_0)
       printf '%s ' "Building RPM(s) & SRPM from archive" | tee -a "$LogFile" >&2
-      printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
       printf '\n\n' >> "$LogFile"
       if rpmbuild -v -ba "$t/$o" >> "$LogFile" 2>&1
       then
@@ -428,7 +428,7 @@ do
       ;;
     0_*)
       printf '%s ' "Building RPM(s) (because the SRPM already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
       printf '\n\n' >> "$LogFile"
       if rpmbuild -v -bb "$t/$o" >> "$LogFile" 2>&1
       then
@@ -442,7 +442,7 @@ do
       ;;
     *_0)
       printf '%s ' "Building SRPM (because an RPM for it already exists) from archive" | tee -a "$LogFile" >&2
-      printf '%s ' "SOURCES/$j" | tee -a "$LogFile"
+      printf '%s ' "$i" | tee -a "$LogFile"
       printf '\n\n' >> "$LogFile"
       if rpmbuild -v -bs "$t/$o" >> "$LogFile" 2>&1
       then
@@ -464,10 +464,11 @@ do
       ;;
     esac
     cd SOURCES
-    rm -f "${v##*/}" $tIco  # The simple name of the rpmlintrc file and all icon file simple names
+    [ $Debug = Y ] || rm "${v##*/}" $tIco  # The simple name of the rpmlintrc file and all icon file simple names
     cd "$MyPWD"
-    rm -rf "$t"
+    [ $Debug = Y ] || rm -r "$t"  # The unpacked archive
+    rm -f "${t}.lnk"  # The link to the original archive
   fi
 done
-# rm -rf "$TmpDir"
+[ $Debug = Y ] || rm -r "$TmpDir"  # The buildrpms.XXX temporary directory
 exit 0
