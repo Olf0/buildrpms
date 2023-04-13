@@ -240,15 +240,15 @@ do
   prevJ="$j"
   i="$nextI"
   j="$nextJ"
-  if ! file -b --mime-type "$i" | grep -q '^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
-  then continue                                            # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
+  k=$((k+1))
+  if ! file -b --mime-type "$i" | egrep -q '^text/|^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
+  then continue                                                    # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
   if ! m="$(tar -tf "$i" 2> /dev/null)"
   then continue
   fi
   [ "$InPlace" != Y ] && printf '\n' >> "$LogFile"
-  printf '%s. ' "$k" | tee -a "$LogFile" >&2
-  k=$((k+1))
+  printf '%s. ' "$((k-1))" | tee -a "$LogFile" >&2
   nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick (k+1)-th entry, empty if beyond range
   nextJ="${nextI##*/}"  # Equivalent to `basename`
   SameNamePrev="$SameNameNext"
