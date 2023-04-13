@@ -132,6 +132,10 @@ list ( )
     if printf '%s' "$i" | fgrep -q /
     then
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by path:" "$i" | tee -a "$LogFile" >&2
+      IsDir=N
+      if [ -z "${i##*/}" ]
+      then IsDir=Y
+      fi
       k="${i%%/*}"
       if [ -z "$k" ]  # Starts with a "/"
       then m="${i#/}"
@@ -148,11 +152,14 @@ list ( )
         m="$i"
       fi
       o="$k/$m"
+      # Attention: Re-assigning k and m from here, based on o
       if p="$(printf '%s' "$o" | egrep -o '(^|[^\])(\\\\)*([*?]|\[[^/]+\])+.*$')"  # `grep` is "greedy" as always
       then k="${o%/*"${p#/}"}"  # See also https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_03
-      else k="${o%/*}"
+      else k="${o%/*}"  # p contains the first wildcard to the end, k the static path elements from the start to the last "/"
       fi
-      m="${o#"$k"/}"
+      m="${o#"$k"/}"  # m contains the path elements starting with the one with wildcards or the final element or nothing if there was a trailing "/" or o=k=m if there are no "/"
+      
+      # Expand the static elements, discards a trailing "/" if m is empty:
       if command -v realpath > /dev/null 2>&1
       then
         if l="$(realpath -ePq "${k:-/}")"  # `realpath` is "preferred" over `readlink`, but not installed on SFOS 3.2.1
@@ -172,7 +179,7 @@ list ( )
       else
         if cd -- "${k:-/}" 2> /dev/null  # See https://unix.stackexchange.com/a/24342
         then k="$(pwd -P 2> /dev/null || pwd)"  # Option "-P" may not exist, but `pwd` is always there.
-        else   # Static path without wildcards does not exist!
+        else   # Static path without wildcards does not exist (or no directory, but that shall be excluded at this point)!
           printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
           continue
         fi
