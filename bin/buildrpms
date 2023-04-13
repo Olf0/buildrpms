@@ -476,7 +476,7 @@ do
     [ $Debug = Y ] || rm "${v##*/}" $tIco  # The simple name of the rpmlintrc file and all icon file simple names
     cd "$MyPWD"
     [ $Debug = Y ] || rm -r "$t"  # The unpacked archive
-    rm -f "${t}.lnk"  # The link to the original archive
+    rm "${t}.lnk"  # The link to the original archive
   fi
 done
 [ $Debug = Y ] || rm -r "$TmpDir"  # The buildrpms.XXX temporary directory
