@@ -250,7 +250,7 @@ do
   prevJ="$j"
   i="$nextI"
   j="$nextJ"
-  k=$((k+1))
+  k=$((k+1))  # Must happen before the first `continue`
   if ! file -b --mime-type "$i" | egrep -q '^text/|^application/'  # Maybe also `file -bi "$i"`, but test may need to be omitted due to
   then continue                                                    # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/file.html#tag_20_46_04
   fi
