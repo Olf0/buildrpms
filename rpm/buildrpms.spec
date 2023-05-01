@@ -12,8 +12,10 @@ Summary:        Script for building RPM packages from tar archives
 # and OBS, when configured accordingly; mind the sorting (`adud` < `alpha`).
 # For details and reasons, see
 # https://github.com/Olf0/sfos-upgrade/wiki/Git-tag-format
-Version:        0.8.3
-Release:        release4
+Version:        0.8.4
+Release:        release5
+# The contents of the Group field should be one of the groups listed here:
+# https://github.com/mer-tools/spectacle/blob/master/data/GROUPS
 Group:          Applications/System
 Distribution:   SailfishOS
 License:        LGPL-2.1-only
