@@ -14,7 +14,7 @@ Summary:        Script for building RPM packages from tar archives
 # https://github.com/Olf0/sfos-upgrade/wiki/Git-tag-format
 Version:        0.8.4
 Release:        release5
-# The contents of the Group field should be one of the groups listed here:
+# The Group field should comprise one of the groups listed here:
 # https://github.com/mer-tools/spectacle/blob/master/data/GROUPS
 Group:          Applications/System
 Distribution:   SailfishOS
