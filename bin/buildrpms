@@ -72,7 +72,7 @@ then
     eval "$Cmd" <<-"EOF"  
 	`buildrpms` takes a list of paths to tar archives (including simple file names, absolute, relative paths and homedir expansion by a leading tilde "~") with each list item (i.e., archive path) as a single argument.  Provided paths may point to files or directories; if a directory is addressed, the whole directory tree below this directory is searched for valid archive files.
 	
-	If an archive path contains no slashes (/), it is used as a simple archive file name; still the wildcard rules denoted below apply.  This name is used to search for valid archive files in a list of directories comprising "." and "~/Downloads"; for each of these directories the whole directory tree below is searched.  The only exception are directories named "SOURCES", if the option "-i|--in-place" is used or a simple name containing no digit somewhere after the last dash-hyphen (-).
+	If an archive path contains no slashes (/), it is used as a simple archive file name; still the wildcard rules denoted below apply.  This name is used to search for valid archive files in a list of directories comprising "." and "~/Downloads"; for each of these directories the whole directory tree below is searched.  The only exception are directories named "SOURCES", if the option "-i|--in-place" is used or if a simple name contains no digit somewhere after the last dash-hyphen (-).
 	
 	Without the option "-i|--in-place", `buildrpms` avoids re-building archives for which an (S)RPM in the directories ./RPMS or ./SRPMS exists by analysing spec file content, the archive's top level directory and the archive name (in this order of precedence).
 	
