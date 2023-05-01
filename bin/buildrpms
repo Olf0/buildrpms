@@ -147,7 +147,7 @@ list ( )
         k="$MyPWD"
         m="$i"
       fi
-      o="$k/$m"  # o is an absolute path (i.e., starting with "/")
+      o="$k/$m"  # o always is an absolute path now (i.e., starting with "/")
       # Attention: Re-assigning k and m from here, based on o!
       if p="$(printf '%s' "$o" | egrep -o '(^|[^\])(\\\\)*([*?]|\[[^/]+\])+.*$')"  # `grep` is "greedy" as always
       then k="${o%/*"${p#/}"}"  # See also https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_13_03
@@ -180,8 +180,8 @@ list ( )
         else
           if cd -- "$k" 2> /dev/null  # See https://unix.stackexchange.com/a/24342
           then
-           k="$(pwd -P 2> /dev/null || pwd)"  # Option "-P" may not exist, but `pwd` is always there.
-           cd "$MyPWD"
+            k="$(pwd -P 2> /dev/null || pwd)"  # Option "-P" may not exist, but `pwd` is always there.
+            cd "$MyPWD"
           else  # Static path without wildcards does not exist (or no directory, but that shall be excluded at this point)!
             printf '%s\n' "[Warning] Omitting argument \"${i}\", because path \"${k}\" does not exist!" | tee -a "$LogFile" >&2
             continue
