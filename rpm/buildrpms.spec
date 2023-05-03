@@ -17,7 +17,6 @@ Release:        release5
 # The Group tag should comprise one of the groups listed here:
 # https://github.com/mer-tools/spectacle/blob/master/data/GROUPS
 Group:          Development/Tools
-Distribution:   SailfishOS
 License:        LGPL-2.1-only
 URL:            https://github.com/Olf0/%{name}
 # The "Source0:" line below requires that the value of %%{name} is also the
