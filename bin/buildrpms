@@ -22,6 +22,8 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 # - Command substitution via "$()" also deletes all trailing newline characters!
 # - `readlink` and `realpath` strip all trailing slashes (/).
 # - `realpaths`'s option "-L" is weird, see detailed description on info page or web-page.
+# - `rpmbuild` of RPM 4.14.1 seems to strictly expect for its command-options "-b*" and "-t*" a gzip'ped tar archive with its contained top level directory named as indiated by the `%setup -n` macro in the spec file (rsp. without the option "-n" `%name-%version`), despite indicated otherwise at places.
+#   The way out is `rpmbuild`'s option "--build-in-place" after unpacking the archive and a `cd %{name}*`.
 
 
 ### Preamble
