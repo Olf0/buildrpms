@@ -12,8 +12,8 @@ Summary:        Script for building RPM packages from tar archives
 # and OBS, when configured accordingly; mind the sorting (`adud` < `alpha`).
 # For details and reasons, see
 # https://github.com/Olf0/sfos-upgrade/wiki/Git-tag-format
-Version:        0.8.4
-Release:        release5
+Version:        0.9.0
+Release:        beta1
 # The Group tag should comprise one of the groups listed here:
 # https://github.com/mer-tools/spectacle/blob/master/data/GROUPS
 Group:          Development/Tools
