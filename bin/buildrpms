@@ -228,7 +228,7 @@ then
 fi
 
 # Building the (S)RPMs
-if [ "$InPlace" = Y ]
+if [ $InPlace = Y ]
 then
   printf '%s\n' "[Info] Processing archives in place." | tee -a "$LogFile" >&2
 else
@@ -489,5 +489,5 @@ do
     rm "${t}.lnk"  # The link to the original archive
   fi
 done
-[ $Debug = Y ] || rm -r "$TmpDir"  # The buildrpms.XXX temporary directory
+[ $Debug = Y ] || [ $InPlace = Y ] || rm -r "$TmpDir"  # The buildrpms.XXX temporary directory
 exit 0
