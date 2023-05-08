@@ -22,6 +22,8 @@ export POSIXLY_CORRECT=1  # Can have side-effects, see e.g., https://github.com/
 # - Command substitution via "$()" also deletes all trailing newline characters!
 # - `readlink` and `realpath` strip all trailing slashes (/).
 # - `realpaths`'s option "-L" is weird, see detailed description on info page or web-page.
+# - `rpmbuild` of RPM 4.14.1 seems to strictly expect for its command-options "-b*" and "-t*" a gzip'ped tar archive with its contained top level directory named as indiated by the `%setup -n` macro in the spec file (rsp. without the option "-n" `%name-%version`), despite indicated otherwise at places.
+#   The way out is `rpmbuild`'s option "--build-in-place" after unpacking the archive and a `cd %{name}* 2> /dev/null`.
 
 
 ### Preamble
@@ -198,7 +200,7 @@ list ( )
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
       DDirs='~/Downloads ~/android_storage/Download'
       DDirs="$(eval echo "$DDirs")"  # Path expansion, here: tilde
-      if [ "$InPlace" = Y ] || ! printf %s "$i" | rev | cut -s -d '-' -f 1 | rev | grep -q '[0-9]'
+      if [ $InPlace = Y ] || ! printf %s "$i" | rev | cut -s -d '-' -f 1 | rev | grep -q '[0-9]'
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable -size +64c -perm /444 -name "${i}*" -print 2> /dev/null)")"
         List="$List$(printf '\n%s' "$(find -L "$MyPWD" -path '*/SOURCES' -prune -o -type f \! -executable -size +64c -perm /444 -name "${i}*" -print 2> /dev/null)")"
@@ -228,7 +230,7 @@ then
 fi
 
 # Building the (S)RPMs
-if [ "$InPlace" = Y ]
+if [ $InPlace = Y ]
 then
   printf '%s\n' "[Info] Processing archives in place." | tee -a "$LogFile" >&2
 else
@@ -257,7 +259,7 @@ do
   if ! m="$(tar -tf "$i" 2> /dev/null)"
   then continue
   fi
-  [ "$InPlace" != Y ] && printf '\n' >> "$LogFile"
+  [ $InPlace != Y ] && printf '\n' >> "$LogFile"
   printf '%s. ' "$((k-1))" | tee -a "$LogFile" >&2
   nextI="$(printf '%s' "$List" | sed -n "${k}p")"  # Pick (k+1)-th entry, empty if beyond range
   nextJ="${nextI##*/}"  # Equivalent to `basename`
@@ -276,7 +278,7 @@ do
       SameNameNextButDiffers=Y
     fi
   fi
-  if [ "$InPlace" = Y ]
+  if [ $InPlace = Y ]
   then  # Get the first entry
     o="$(printf '%s' "$m" | head -1)"  # E.g., "xz-5.0.4/", note the trailing slash
     p="${o%%/*}"  # Strip it of the slash (if present) and all subsequent path elements
@@ -483,11 +485,11 @@ do
       ;;
     esac
     cd SOURCES
-    [ $Debug = Y ] || rm "${v##*/}" $tIco  # The simple name of the rpmlintrc file and all icon file simple names
+    [ $Debug = Y ] || rm -f "${v##*/}" $tIco  # The simple name of the rpmlintrc file (might be empty) and all icon file simple names
     cd "$MyPWD"
     [ $Debug = Y ] || rm -r "$t"  # The unpacked archive
     rm "${t}.lnk"  # The link to the original archive
   fi
 done
-[ $Debug = Y ] || rm -r "$TmpDir"  # The buildrpms.XXX temporary directory
+[ $Debug = Y ] || [ $InPlace = Y ] || rm -r "$TmpDir"  # The buildrpms.XXX temporary directory
 exit 0
