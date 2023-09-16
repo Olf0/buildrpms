@@ -74,7 +74,7 @@ then
     eval "$Cmd" <<-"EOF"  
 	`buildrpms` takes a list of paths to tar archives (including simple file names, absolute, relative paths and homedir expansion by a leading tilde "~") with each list item (i.e., archive path) as a single argument.  Provided paths may point to files or directories; if a directory is addressed, the whole directory tree below this directory is searched for valid archive files.
 	
-	If an archive path contains no slashes (/), it is used as a simple archive file name; still the wildcard rules denoted below apply.  This name is used to search for valid archive files in a list of directories comprising "." and "~/Downloads"; for each of these directories the whole directory tree below is searched.  The only exception are directories named "SOURCES" beneath "." aka "$PWD", if the option "-i|--in-place" is used or if a simple name contains no digit somewhere after the last dash-hyphen (-).
+	If an archive path contains no slashes (/), it is used as a simple archive file name; still the wildcard rules denoted below apply.  This name is used to search for valid archive files in a list of directories comprising "." (aka "$PWD") and "~/Downloads"; for each of these directories the whole directory tree below is searched.  The only exceptions are: If the option "-i|--in-place" is used or if a simple name contains no digit somewhere after the last dash-hyphen (-) or if a simple name contains no digit right after the second last dash-hyphen (-), directories named "SOURCES" beneath "." are not searched.
 	
 	Without the option "-i|--in-place", `buildrpms` avoids re-building archives for which an (S)RPM in the directories ./RPMS or ./SRPMS exists by analysing spec file content, the archive's top level directory and the archive name (in this order of precedence).
 	
@@ -200,7 +200,7 @@ list ( )
       [ $Debug = Y ] && printf '%s %s\n' "[Debug] Looking up by name:" "$i" | tee -a "$LogFile" >&2
       DDirs='~/Downloads ~/android_storage/Download'
       DDirs="$(eval echo "$DDirs")"  # Path expansion, here: tilde
-      if [ $InPlace = Y ] || ! printf %s "$i" | rev | cut -s -d '-' -f 1 | rev | grep -q '[0-9]'
+      if [ $InPlace = Y ] || ! printf %s "$i" | rev | cut -s -d '-' -f 1 | grep -q '[0-9]' || ! printf %s "$i" | rev | cut -s -d '-' -f 2 | grep -q '[0-9]$'
       then  # Note that the way List is constructed (found no other way without copying instead of ap- or pre-pending the extant List each round, and without resorting to flaky `echo -e "\n"`), it contains a leading, empty line, but no concluding newline character.
         List="$List$(printf '\n%s' "$(find -L $DDirs -type f \! -executable -size +64c -perm /444 -name "${i}*" -print 2> /dev/null)")"
         List="$List$(printf '\n%s' "$(find -L "$MyPWD" -path '*/SOURCES' -prune -o -type f \! -executable -size +64c -perm /444 -name "${i}*" -print 2> /dev/null)")"
